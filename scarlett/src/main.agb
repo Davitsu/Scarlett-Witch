@@ -1,0 +1,255 @@
+; Davitsu (David Giron) 2015
+; Scarlett Witch v0.0.1a
+
+INCLUDE "gbhw.inc"          ; Definiciones
+
+_PAD            EQU     _RAM
+_PLAYER_DIR     EQU     _RAM+1
+
+SECTION "start", HOME[$0100] ; Comienza el programa
+    nop
+    jp	    inicio
+
+    ROM_HEADER  ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
+
+inicio:
+    nop
+    di                      ; Deshabilita interrupciones
+    ld      sp, $ffff       ; Apuntamos al tope de la ram
+
+inicializacion:
+    ld      a, %00100111    ; Colores de paleta desde el mas oscuro al mas claro
+                            ; 
+    ld      [rBGP], a       ; Paleta de fondo
+    ld      [rOBP0], a      ; Paleta de sprites
+
+    ; Creamos otra paleta para la paleta 2 de sprites, inversa a la normal
+    ld      a, %00011011
+    ld      [rOBP1], a
+
+    ld      a, 0            ; Escribimos 0 en los registros de scroll X e Y
+    ld      [rSCX], a       ; con lo que posicionamos la pantalla visible
+    ld      [rSCY], a       ; al inicio (arriba a la izq) del fondo.
+
+    call    apaga_LCD       ; llamamos a la rutina que apaga el LCD
+
+    ; cargamos los tiles en la memoria de tiles
+
+    ld      hl, TittleTiles		    ; cargamos en HL la direcci√≥n de nuestro tile
+    ld      de, _VRAM			    ; en DE direcci√≥n de la memoria de video
+    ld      bc, EndTittleTiles-TittleTiles  ; numero de bytes a copiar
+
+    call    CopiaMemoria
+ 
+    ; cargamos el mapa
+    ld	    hl, TittleMap
+    ld	    de, _SCRN0		; mapa 0
+    ld	    bc, 32*32
+    call    CopiaMemoriaMapa
+ 
+	; bien, tenemos todo el mapa de tiles cargado
+	; ahora limpiamos la memoria de sprites
+    ld	    de, _OAMRAM		; memoria de atributos de sprites
+    ld	    bc, 40*4		; 40 sprites x 4 bytes cada uno
+    ld	    l, 0            	; lo vamos a poner todo a cero, asi los sprites
+    call    RellenaMemoria	; no usados quedan fuera de pantalla
+
+    ; ahora vamos a crear el sprite.
+
+    ; configuramos y activamos el display
+    ld      a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON
+    ld      [rLCDC], a
+
+; bucle principal
+main_loop:
+    ; leemos el pad
+    call    lee_pad
+    ; lo primero, esperamos por el VBlank, ya que no podemos modificar
+    ; la VRAM fuera de √©l, o pasar√°n cosas raras
+.wait:
+    ld      a, [rLY] ; Comprueba si esta en el intervalo vertical (145)
+    cp      145
+    jr      nz, .wait
+
+    ld      a, [_PAD]
+    and     PADF_START     
+    call    nz, game_init    
+
+    ; un peque√±o retardo
+    call retardo
+    ; volvemos a empezar
+    jr      main_loop
+
+; Rutina de lectura del pad
+lee_pad:
+    ; vamos a leer la cruzeta:
+    ld      a, %00100000    ; bit 4 a 0, bit 5 a 1 (cruzeta activada, botones no)
+    ld      [rP1], a
+
+    ; ahora leemos el estado de la cruzeta, para evitar el bouncing
+    ; hacemos varias lecturas
+    ld      a, [rP1]
+    ld      a, [rP1]
+    ld      a, [rP1]
+    ld      a, [rP1]
+
+    and     $0F             ; solo nos importan los 4 bits de abajo.
+    swap    a               ; intercambiamos parte baja y alta.
+    ld      b, a            ; guardamos el estado de la cruzeta en b
+
+    ; vamos a por los botones
+    ld      a, %00010000    ; bit 4 a 1, bit 5 a 0 (botones activados, cruzeta no)
+    ld      [rP1], a
+
+    ; leemos varias veces para evitar el bouncing
+    ld      a, [rP1]
+    ld      a, [rP1]
+    ld      a, [rP1]
+    ld      a, [rP1]
+
+    ; tenemos en A, el estado de los botones
+    and     $0F             ; solo nos importan los 4 bits de abajo.
+    or      b               ; hacemos un or con b, para "meter" en la parte
+                            ; superior de A, el estado de la cruzeta.
+
+    ; ahora tenemos en A, el estado de todo, hacemos el complemento y
+    ; lo guardamos en la variable
+    cpl
+    ld      [_PAD], a
+    ; volvemos
+    ret
+
+; Rutina de apagado del LCD
+apaga_LCD:
+    ld      a,[rLCDC]
+    rlca                    ; Pone el bit alto de LCDC en el flag de acarreo
+    ret     nc              ; La pantalla ya est√° apagada, volver.
+
+    ; esperamos al VBlank, ya que no podemos apagar la pantalla
+    ; en otro momento
+
+.espera_VBlank
+    ld      a, [rLY]
+    cp      145
+    jr      nz, .espera_VBlank
+
+    ; estamos en VBlank, apagamos el LCD
+    ld      a,[rLCDC]       ; en A, el contenido del LCDC
+    res     7,a             ; ponemos a cero el bit 7 (activado del LCD)
+    ld      [rLCDC],a       ; escribimos en el registro LCDC el contenido de A
+
+    ret                     ; volvemos
+
+; rutina de retardo
+retardo:
+    ld      de, 2000        ; numero de veces a ejecutar el bucle
+.delay:
+    dec     de              ; decrementamos
+    ld      a, d            ; vemos si es cero
+    or      e
+    jr      z, .fin_delay
+    nop
+    jr      .delay
+.fin_delay:
+    ret
+
+; rutina de copia a memoria
+; copia un numero de bytes de una direccion a otra
+; espera los par·metros:
+; hl - direcciÛn de datos a copiar
+; de - direcciÛn de destino
+; bc - numero de datos a copiar
+; destruye el contenido de A
+CopiaMemoria:
+    ld	    a, [hl]	; cargamos el dato en A
+    ld	    [de], a	; copiamos el dato al destino
+    dec	    bc		; uno menos por copiar
+    ; comprobamos si bc es cero
+    ld	    a, c
+    or	    b
+    ret	    z		; si es cero, volvemos
+    ; si no, seguimos
+    inc	    hl
+    inc	    de
+    jr	    CopiaMemoria
+
+CopiaMemoriaMapa:
+    ld	    a, [hl]		; cargamos el dato en A
+    ld	    [de], a		; copiamos el dato al destino
+    dec	    bc		; uno menos por copiar
+    jr	    .copia_memoria_mapa_seguir
+
+.copia_memoria_mapa_blanco:
+    ld	    a, 0		; cargamos el dato en A
+    ld	    [de], a		; copiamos el dato al destino
+    dec	    bc		; uno menos por copiar
+
+.copia_memoria_mapa_seguir:
+    ; comprobamos si bc es cero
+    ld	    a, c
+    or	    b
+    ret	    z		; si es cero, volvemos
+    ; si no, seguimos
+    
+    ; comprobamos si estamos fuera de lo 20x18
+    ld	    a, c
+    and	    %00011111
+    cp	    $0D
+    jr	    c, .copia_memoria_mapa_fuera
+
+    ;si no, seguimos
+.copia_memoria_mapa_dentro:
+    inc	    hl
+    inc	    de
+    jr	    CopiaMemoriaMapa
+
+.copia_memoria_mapa_fuera:
+    ld	    a, c
+    and	    %00001111
+    jr	    z, .copia_memoria_mapa_dentro
+
+    inc	    de
+    jr	    .copia_memoria_mapa_blanco
+
+; rutina de relleno de memoria
+; rellena un numero de bytes de memoria con un dato
+; espera los par·metros:
+; de - direccion de destino
+; bc - n˙mero de datos a rellenar
+; l - dato a rellenar
+RellenaMemoria:
+    ld	    a, l
+    ld	    [de], a	; mete el dato en el destino
+    dec	    bc		; uno menos a rellenar
+    
+    ld	    a, c		
+    or	    b		; comprobamos si bc es cero
+    ret	    z		; si es cero volvemos
+    inc	    de		; si no, seguimos
+    jr	    RellenaMemoria
+
+; Codigo de otros archivos
+
+INCLUDE "game.agb"
+
+; Datos de nuestros tiles
+
+; Tittle
+TittleTiles:
+INCLUDE "font.z80"
+EndTittleTiles:
+
+TittleMap:
+INCLUDE "tittle.z80"
+EndTittleMap:
+
+; Game
+GameTiles:
+INCLUDE "gametiles.z80"
+EndGameTiles:
+
+GameMap:
+INCLUDE "gamemap.z80"
+EndGameMap:
+
+

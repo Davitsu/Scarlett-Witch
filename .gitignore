@@ -1,0 +1,9 @@
+# ======= #
+# General #
+# ======= #
+
+*.exe
+*.obj
+*.gb
+*.bat
+scarlett/graphics
