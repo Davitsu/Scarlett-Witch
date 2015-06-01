@@ -86,19 +86,19 @@ game_loop:
     ;ld      a, %00000000
     ;ld      [_PLAYER_DIR], a
 
-    ;ld      a, [_PAD]
+    ;ld      a, [sw_pad]
     ;and     PADF_UP     
     ;call    nz, game_init
 
-    ;ld      a, [_PAD]
+    ;ld      a, [sw_pad]
     ;and     PADF_DOWN     
     ;call    nz, game_init
 
-    ;ld      a, [_PAD]
+    ;ld      a, [sw_pad]
     ;and     PADF_RIGHT     
     ;call    nz, game_init
 
-    ;ld      a, [_PAD]
+    ;ld      a, [sw_pad]
     ;and     PADF_LEFT     
     ;call    nz, game_init
 
@@ -106,14 +106,17 @@ game_loop:
     call update_sprites
 
     ; un pequeño retardo
-    call retardo
+    ;call retardo
     ; volvemos a empezar
+
+    call    gbt_update ; Update player
+
     jr      game_loop
 
 player_move:
 
 .player_move_up:
-    ld      a, [_PAD]
+    ld      a, [sw_pad]
     and     PADF_UP
     jr      z, .player_move_down
 
@@ -135,7 +138,7 @@ player_move:
     ld      [_SPR1_ATT], a
 
 .player_move_down:
-    ld      a, [_PAD]
+    ld      a, [sw_pad]
     and     PADF_DOWN
     jr      z, .player_move_right
 
@@ -157,7 +160,7 @@ player_move:
     ld      [_SPR1_ATT], a
 
 .player_move_right:
-    ld      a, [_PAD]
+    ld      a, [sw_pad]
     and     PADF_RIGHT
     jr      z, .player_move_left
 
@@ -179,7 +182,7 @@ player_move:
     ld      [_SPR1_ATT], a
 
 .player_move_left:
-    ld      a, [_PAD]
+    ld      a, [sw_pad]
     and     PADF_LEFT
     jr      z, .player_move_end
 

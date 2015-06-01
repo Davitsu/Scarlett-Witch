@@ -2,19 +2,34 @@
 ; Scarlett Witch v0.0.1a
 
 INCLUDE "gbhw.inc"          ; Definiciones
+INCLUDE "gbt_player.inc"
 
-_PAD            EQU     _RAM
-_PLAYER_DIR     EQU     _RAM+1
+GLOBAL  song_data
+
+SECTION "SW_VAR_1", WRAM0
+
+sw_pad: DS 1
 
 SECTION "start", HOME[$0100] ; Comienza el programa
     nop
     jp	    inicio
 
-    ROM_HEADER  ROM_NOMBC, ROM_SIZE_32KBYTE, RAM_SIZE_0KBYTE
+    ROM_HEADER  ROM_MBC1_RAM_BAT, ROM_SIZE_64KBYTE, RAM_SIZE_8KBYTE
 
 inicio:
     nop
     di                      ; Deshabilita interrupciones
+
+    ld      sp,$D000 ; Set stack
+
+    ld      a,$01
+    ld      [rIE],a ; Enable VBL interrupt
+
+    ld      de,song_data
+    ld      bc,BANK(song_data)
+    ld      a,$05
+    call    gbt_play ; Play song
+
     ld      sp, $ffff       ; Apuntamos al tope de la ram
 
 inicializacion:
@@ -35,14 +50,14 @@ inicializacion:
 
     ; cargamos los tiles en la memoria de tiles
 
-    ld      hl, TittleTiles		    ; cargamos en HL la dirección de nuestro tile
-    ld      de, _VRAM			    ; en DE dirección de la memoria de video
-    ld      bc, EndTittleTiles-TittleTiles  ; numero de bytes a copiar
+    ld      hl, TitleTiles		    ; cargamos en HL la direcciÃ³n de nuestro tile
+    ld      de, _VRAM			    ; en DE direcciÃ³n de la memoria de video
+    ld      bc, EndTitleTiles-TitleTiles  ; numero de bytes a copiar
 
     call    CopiaMemoria
  
     ; cargamos el mapa
-    ld	    hl, TittleMap
+    ld	    hl, TitleMap
     ld	    de, _SCRN0		; mapa 0
     ld	    bc, 32*32
     call    CopiaMemoriaMapa
@@ -54,8 +69,6 @@ inicializacion:
     ld	    l, 0            	; lo vamos a poner todo a cero, asi los sprites
     call    RellenaMemoria	; no usados quedan fuera de pantalla
 
-    ; ahora vamos a crear el sprite.
-
     ; configuramos y activamos el display
     ld      a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON
     ld      [rLCDC], a
@@ -63,21 +76,27 @@ inicializacion:
 ; bucle principal
 main_loop:
     ; leemos el pad
+
     call    lee_pad
+
     ; lo primero, esperamos por el VBlank, ya que no podemos modificar
-    ; la VRAM fuera de él, o pasarán cosas raras
+    ; la VRAM fuera de Ã©l, o pasarÃ¡n cosas raras
 .wait:
+
     ld      a, [rLY] ; Comprueba si esta en el intervalo vertical (145)
     cp      145
     jr      nz, .wait
 
-    ld      a, [_PAD]
+    ld      a, [sw_pad]
     and     PADF_START     
     call    nz, game_init    
 
-    ; un pequeño retardo
-    call retardo
+    ; un pequeÃ±o retardo
+    ;call retardo
     ; volvemos a empezar
+
+    call    gbt_update ; Update player
+
     jr      main_loop
 
 ; Rutina de lectura del pad
@@ -115,7 +134,7 @@ lee_pad:
     ; ahora tenemos en A, el estado de todo, hacemos el complemento y
     ; lo guardamos en la variable
     cpl
-    ld      [_PAD], a
+    ld      [sw_pad], a
     ; volvemos
     ret
 
@@ -123,7 +142,7 @@ lee_pad:
 apaga_LCD:
     ld      a,[rLCDC]
     rlca                    ; Pone el bit alto de LCDC en el flag de acarreo
-    ret     nc              ; La pantalla ya está apagada, volver.
+    ret     nc              ; La pantalla ya estÃ¡ apagada, volver.
 
     ; esperamos al VBlank, ya que no podemos apagar la pantalla
     ; en otro momento
@@ -155,9 +174,9 @@ retardo:
 
 ; rutina de copia a memoria
 ; copia un numero de bytes de una direccion a otra
-; espera los par�metros:
-; hl - direcci�n de datos a copiar
-; de - direcci�n de destino
+; espera los parámetros:
+; hl - dirección de datos a copiar
+; de - dirección de destino
 ; bc - numero de datos a copiar
 ; destruye el contenido de A
 CopiaMemoria:
@@ -213,9 +232,9 @@ CopiaMemoriaMapa:
 
 ; rutina de relleno de memoria
 ; rellena un numero de bytes de memoria con un dato
-; espera los par�metros:
+; espera los parámetros:
 ; de - direccion de destino
-; bc - n�mero de datos a rellenar
+; bc - número de datos a rellenar
 ; l - dato a rellenar
 RellenaMemoria:
     ld	    a, l
@@ -234,14 +253,14 @@ INCLUDE "game.agb"
 
 ; Datos de nuestros tiles
 
-; Tittle
-TittleTiles:
+; Title
+TitleTiles:
 INCLUDE "font.z80"
-EndTittleTiles:
+EndTitleTiles:
 
-TittleMap:
-INCLUDE "tittle.z80"
-EndTittleMap:
+TitleMap:
+INCLUDE "title.z80"
+EndTitleMap:
 
 ; Game
 GameTiles:
@@ -251,5 +270,3 @@ EndGameTiles:
 GameMap:
 INCLUDE "gamemap.z80"
 EndGameMap:
-
-
