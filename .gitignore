@@ -6,4 +6,11 @@
 *.obj
 *.gb
 *.bat
+*.sym
+*.sav
+*.map
+*.mod
 scarlett/graphics
+scarlett/prueba
+scarlett/audio
+scarlett/mod2gbt
