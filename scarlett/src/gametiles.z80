@@ -1,11 +1,3 @@
-; GAMETILES.Z80
-;
-; Tile Source File.
-;
-; Info:
-;   Section              : Tiles
-;   Bank                 : 0
-;   Form                 : All tiles as one unit.
 DB $3F,$3F,$40,$7F,$A3,$FC,$5F,$53
 DB $3C,$2F,$70,$7F,$E7,$FE,$DF,$F2
 DB $D7,$FA,$4B,$7C,$27,$3F,$15,$1A
@@ -78,3 +70,5 @@ DB $00,$3F,$20,$1F,$50,$8F,$28,$C7
 DB $14,$E3,$0A,$F1,$05,$F8,$02,$FC
 DB $63,$5F,$A3,$DF,$C3,$1F,$13,$EF
 DB $0B,$F7,$07,$FB,$FF,$FF,$FF,$FF
+DB $00,$00,$00,$00,$00,$00,$00,$00
+DB $00,$00,$00,$00,$00,$00,$00,$00
