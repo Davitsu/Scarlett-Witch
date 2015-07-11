@@ -21,7 +21,9 @@ INCLUDE "gametiles.z80"
 EndGameTiles:
 
 GameMap:
-INCLUDE "gamemap.z80"
+;INCLUDE "gamemap.z80"
+;INCLUDE "mapaprueba1.z80"
+INCLUDE "mapaprueba2.z80"
 EndGameMap:
 
 GameMap2:

@@ -18,6 +18,13 @@ SECTION "SW_VAR_1", WRAM0
 
 sw_playmode: DS 1               ; Modo actual
 sw_palette_background: DS 1     ; Paleta de fondo (para efectos)
+sw_player_pos_tile: DS 1        ; Tile en el que se encuentra player
+sw_player_pos_y: DS 1            ; Player Y Position
+sw_player_pos_x: DS 1            ; Player X Position
+
+;o-----------------------------------o
+;|            GAME INIT              |
+;o-----------------------------------o
 
 SECTION "Game", HOME ; Comienza el programa
 
@@ -47,7 +54,7 @@ Game:
     ld      hl, GameMap
     ld      de, _SCRN0      ; mapa 0
     ld      bc, 32*32
-    call    CopiaMemoriaMapa
+    call    CopiaMemoria
 
     ; cargamos el mapa
     ld      hl, GameMap2
@@ -61,6 +68,12 @@ Game:
     ld      bc, 40*4        ; 40 sprites x 4 bytes cada uno
     ld      l, 0                ; lo vamos a poner todo a cero, asi los sprites
     call    RellenaMemoria  ; no usados quedan fuera de pantalla
+
+    ; posiciones del player (no de los graficos)
+    ld      a, 74
+    ld      [sw_player_pos_y], a    ; posición Y del sprite     
+    ld      a, 90
+    ld      [sw_player_pos_x], a    ; posición X del sprite
 
     ; ahora vamos a crear los sprite.
 
@@ -91,6 +104,10 @@ Game:
     ld      a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ16|LCDCF_OBJON
     ld      [rLCDC], a
 
+;o-----------------------------------o
+;|             GAME LOOP             |
+;o-----------------------------------o
+
 game_loop:
     halt
     nop
@@ -105,12 +122,17 @@ game_loop:
 
     call switch_playmode
     call player_move
+    call update_display
     call update_sprites
 
     call    gbt_update ; Update player
 
     ;call retardo
     jr      game_loop
+
+;o-----------------------------------o
+;|          SWITCH MODES             |
+;o-----------------------------------o
 
 switch_playmode:
     ; Compruebo si estoy cambiando
@@ -194,6 +216,9 @@ switch_playmode:
 
     ret
 
+;o-----------------------------------o
+;|           FADE EFFECT             |
+;o-----------------------------------o
 
 fade_out_palette:       ; Fade out de la paleta de fondo
     ld      d, 4        ; Contador para los 4 colores
@@ -246,6 +271,10 @@ fade_in_palette:        ; Fade out de la paleta de fondo
 
     ret
 
+;o-----------------------------------o
+;|          PLAYER MOVEMENT          |
+;o-----------------------------------o
+
 player_move:
 
 .player_move_up:
@@ -253,9 +282,9 @@ player_move:
     and     PADF_UP
     jr      z, .player_move_down
 
-    ld      a, [_SPR0_Y]
+    ld      a, [sw_player_pos_y]    ; Muevo arriba Posicion real
     dec     a
-    ld      [_SPR0_Y], a
+    ld      [sw_player_pos_y], a
 
     ld      a, 8
     ld      [_SPR0_NUM], a
@@ -275,9 +304,9 @@ player_move:
     and     PADF_DOWN
     jr      z, .player_move_right
 
-    ld      a, [_SPR0_Y]
+    ld      a, [sw_player_pos_y]    ; Muevo abajo Posicion real
     inc     a
-    ld      [_SPR0_Y], a
+    ld      [sw_player_pos_y], a
 
     ld      a, 0
     ld      [_SPR0_NUM], a
@@ -297,9 +326,9 @@ player_move:
     and     PADF_RIGHT
     jr      z, .player_move_left
 
-    ld      a, [_SPR0_X]
+    ld      a, [sw_player_pos_x]    ; Muevo derecha Posicion real
     inc     a
-    ld      [_SPR0_X], a
+    ld      [sw_player_pos_x], a
 
     ld      a, 4
     ld      [_SPR0_NUM], a
@@ -319,9 +348,9 @@ player_move:
     and     PADF_LEFT
     jr      z, .player_move_end
 
-    ld      a, [_SPR0_X]
+    ld      a, [sw_player_pos_x]    ; Muevo izquierda Posicion real
     dec     a
-    ld      [_SPR0_X], a
+    ld      [sw_player_pos_x], a
 
     ld      a, 6
     ld      [_SPR0_NUM], a
@@ -350,3 +379,86 @@ update_sprites:
 
 
     ret
+
+;o---------------------------------------o
+;| DISPLAY UPDATE + PLAYER SPRITE UPDATE |
+;o---------------------------------------o
+
+update_display:
+
+.update_display_y:
+    ld      a, [sw_player_pos_y]            ; PlayerPosY < 72, Display no se mueve
+    cp      72 ;$48
+    jr      c, .update_display_y_move_top   
+
+    ld      a, [sw_player_pos_y]            ; PlayerPosY >= 184, Display no se mueve
+    cp      184 ;$B8
+    jr      nc, .update_display_y_move_bottom
+
+    ld      a, [sw_player_pos_y]            ; Else, Display si se mueve
+    sub     a, 72 ;$48
+    ld      [rSCY], a
+
+    ld      a, 72                           ; Dejar Grafico estatico en la
+    ld      [_SPR0_Y], a                    ; mitad Y del display
+
+    jr      .update_display_x
+
+.update_display_y_move_top:                 
+    ld      a, 0
+    ld      [rSCY], a
+
+    ld      a, [sw_player_pos_y]            ; Mover Grafico cuando esta
+    ld      [_SPR0_Y], a                    ; en el limite superior del mapa
+
+    jr      .update_display_x
+
+.update_display_y_move_bottom: 
+    ld      a, 112 ;$70
+    ld      [rSCY], a
+
+    ld      a, [sw_player_pos_y]            ; Mover Grafico cuando esta
+    sub     a, 112 ;$70                     ; en el limite inferior del mapa
+    ld      [_SPR0_Y], a
+
+.update_display_x:
+    ld      a, [sw_player_pos_x]            ; PlayerPosX < 80, Display no se mueve
+    cp      80 ;$50
+    jr      c, .update_display_x_move_left
+
+    ld      a, [sw_player_pos_x]            ; PlayerPosX >= 176, Display no se mueve
+    cp      176 ;$B0
+    jr      nc, .update_display_x_move_right
+
+    ld      a, [sw_player_pos_x]            ; Else, Display si se mueve
+    sub     a, 80 ;$50
+    ld      [rSCX], a
+
+    ld      a, 80                           ; Dejar Grafico estatico en la
+    ld      [_SPR0_X], a                    ; mitad X del display
+
+    jr      .update_display_end
+
+.update_display_x_move_left:   
+    ld      a, 0
+    ld      [rSCX], a
+
+    ld      a, [sw_player_pos_x]            ; Mover Grafico cuando esta
+    ld      [_SPR0_X], a                    ; en el limite izquierdo del mapa
+
+    jr      .update_display_end
+
+.update_display_x_move_right: 
+    ld      a, 96 ;$60
+    ld      [rSCX], a
+
+    ld      a, [sw_player_pos_x]            ; Mover Grafico cuando esta
+    sub     a, 96 ;$60                      ; en el limite derecho del mapa
+    ld      [_SPR0_X], a
+
+.update_display_end:
+
+    ret
+
+;update_pos_tile:
+;    ld      a, 
