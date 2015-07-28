@@ -46,6 +46,21 @@ lee_pad::
 
 SECTION	"Utilities",HOME
 
+;--------------------------------------------------------------------------
+;- memset()    d = value    hl = start address    bc = size               -
+;--------------------------------------------------------------------------
+
+memset::
+    
+    ld  a,d
+    ld  [hl+],a
+    dec bc
+    ld  a,b
+    or  a,c
+    jr  nz,memset
+    
+    ret
+
 ; rutina de copia a memoria
 ; copia un numero de bytes de una direccion a otra
 ; espera los parámetros:

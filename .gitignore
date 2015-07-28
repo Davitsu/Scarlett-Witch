@@ -10,6 +10,7 @@
 *.sav
 *.map
 *.mod
+*.sn1
 scarlett/graphics
 scarlett/prueba
 scarlett/audio

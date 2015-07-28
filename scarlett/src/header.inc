@@ -30,6 +30,7 @@ HEADER_INC	SET	1
 ;o-----------------------------------o
 
 	GLOBAL lee_pad
+	GLOBAL memset
 	GLOBAL CopiaMemoria
 	GLOBAL CopiaMemoriaMapa
 	GLOBAL RellenaMemoria
@@ -50,6 +51,9 @@ HEADER_INC	SET	1
 	GLOBAL GameMap
 	GLOBAL EndGameMap
 
+	GLOBAL GameMapCol
+	GLOBAL EndGameMapCol
+
 	GLOBAL GameMap2
 	GLOBAL EndGameMap2
 
@@ -57,7 +61,11 @@ HEADER_INC	SET	1
 	GLOBAL palette_player
 
 	GLOBAL apaga_LCD
+	GLOBAL enciende_LCD
+	GLOBAL wait_screen_blank
 	GLOBAL spr_set_palette
+	GLOBAL spr_get_palette
 	GLOBAL bg_set_palette
+	GLOBAL bg_get_palette
 
 	ENDC	;HEADER_INC

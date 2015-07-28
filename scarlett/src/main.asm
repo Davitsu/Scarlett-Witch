@@ -6,7 +6,7 @@ INCLUDE "header.inc"
 
 SECTION "SW_VAR_1", WRAM0
 
-sw_cpu_type: DS 1    ; CPU (GB || GBC)
+sw_cpu_type: DS 1    ; CPU (GB = $01, GBC = $11)
 sw_pad: DS 1         ; Boton pulsado
 
 SECTION "Cartridge Header",HOME[$0100]
@@ -53,7 +53,7 @@ Start:
 inicializacion:
 
     ld      a, [sw_cpu_type]
-    cp      $C0
+    cp      $11
     jr      z, .main_gbc_palette
     
 .main_gb_palette: ; GB Paletas
@@ -62,7 +62,7 @@ inicializacion:
     ld      [rBGP], a       ; Paleta de fondo
     ld      [rOBP0], a      ; Paleta de sprites
 
-    jr      z, .main_end_palette
+    jr      .main_end_palette
 
 .main_gbc_palette: ; GBC Paletas
     ld      hl, palette_dungeon
@@ -124,7 +124,7 @@ main_loop:
 
     ld      a, [sw_pad]
     and     PADF_START     
-    call    nz, Game  
+    jp    nz, Game  
 
     call    gbt_update ; Update player
 
