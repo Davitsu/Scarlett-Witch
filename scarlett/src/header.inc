@@ -8,6 +8,7 @@ HEADER_INC	SET	1
 ;|			   Variables             |
 ;o-----------------------------------o
 
+	GLOBAL sw_oam_table
 	GLOBAL sw_cpu_type
 	GLOBAL sw_pad
 	GLOBAL sw_playmode
@@ -65,6 +66,11 @@ HEADER_INC	SET	1
 	GLOBAL wait_screen_blank
 	GLOBAL spr_set_palette
 	GLOBAL spr_get_palette
+
+	GLOBAL init_OAM
+	GLOBAL refresh_OAM
+	GLOBAL refresh_custom_OAM
+
 	GLOBAL bg_set_palette
 	GLOBAL bg_get_palette
 

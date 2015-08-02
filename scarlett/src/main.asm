@@ -4,10 +4,13 @@
 INCLUDE "hardware.inc"
 INCLUDE "header.inc"
 
+_STACKTOP    EQU     $FFFE
+
 SECTION "SW_VAR_1", WRAM0
 
-sw_cpu_type: DS 1    ; CPU (GB = $01, GBC = $11)
-sw_pad: DS 1         ; Boton pulsado
+sw_oam_table: DS 160    ; Datos de los Sprite para DMA (40 sprites x 4 bytes = 160)
+sw_cpu_type: DS 1       ; CPU (GB = $01, GBC = $11)
+sw_pad: DS 1            ; Boton pulsado
 
 SECTION "Cartridge Header",HOME[$0100]
     nop
@@ -48,10 +51,9 @@ Start:
     ld      a,$05
     call    gbt_play ; Play song
 
-    ld      sp, $ffff       ; Apuntamos al tope de la ram
+    ld      sp, _STACKTOP
 
 inicializacion:
-
     ld      a, [sw_cpu_type]
     cp      $11
     jr      z, .main_gbc_palette
@@ -81,6 +83,8 @@ inicializacion:
 
     call    apaga_LCD       ; llamamos a la rutina que apaga el LCD
 
+    call    init_OAM
+
     ; cargamos los tiles en la memoria de tiles
 
     ld      hl, TitleTiles		    ; cargamos en HL la direcciÃ³n de nuestro tile
@@ -101,6 +105,12 @@ inicializacion:
     ld	    bc, 40*4		; 40 sprites x 4 bytes cada uno
     ld	    l, 0            	; lo vamos a poner todo a cero, asi los sprites
     call    RellenaMemoria	; no usados quedan fuera de pantalla
+
+    ; Inicializamos la tabla de sprites
+    ld      hl, sw_oam_table
+    ld      bc, $A0
+    ld      d, 0
+    call    memset
 
     ; configuramos y activamos el display
     ld      a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ8|LCDCF_OBJON

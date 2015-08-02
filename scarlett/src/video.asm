@@ -135,6 +135,52 @@ spr_get_palette::
 	ld 		[rOCPS], a
 	jr 		.spr_get_palette_loop
 
+
+init_OAM::
+
+	ld	bc,__refresh_OAM_end - __refresh_OAM
+	ld	hl,__refresh_OAM
+	ld	de,refresh_OAM_HRAM
+	call CopiaMemoria
+	
+	ret
+	
+__refresh_OAM:
+
+	ld  [rDMA],a 
+	ld  a,$28      ;delay 200ms
+.delay
+	dec a
+	jr  nz,.delay
+	
+	ret
+
+__refresh_OAM_end:
+
+;--------------------------------------------------------------------------
+;- refresh_OAM()                                                          -
+;--------------------------------------------------------------------------
+	
+refresh_OAM::
+	
+	ld	a,sw_oam_table >> 8
+	jp	refresh_OAM_HRAM
+
+;--------------------------------------------------------------------------
+;- refresh_custom_OAM()                                                   -
+;--------------------------------------------------------------------------
+
+refresh_custom_OAM::
+	jp	refresh_OAM_HRAM
+
+;--------------------------------------------------------------------------
+;-                           HRAM VARIABLES                               -
+;--------------------------------------------------------------------------
+
+	SECTION	"OAMRefreshFn",HRAM[$FF80]
+	
+refresh_OAM_HRAM:	DS (__refresh_OAM_end - __refresh_OAM)
+
 SECTION	"Video_Background",HOME
 	
 ;--------------------------------------------------------------------------
@@ -191,4 +237,3 @@ bg_get_palette::
 	inc 	a
 	ld 		[rBCPS], a
 	jr 		.bg_get_palette_loop
-	

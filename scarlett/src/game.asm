@@ -4,17 +4,15 @@
 INCLUDE "hardware.inc"
 INCLUDE "header.inc"
 
-_SPR0_Y     EQU     _OAMRAM ; la Y del sprite 0, es el inicio de la mem de sprites
-_SPR0_X     EQU     _OAMRAM+1
-_SPR0_NUM   EQU     _OAMRAM+2
-_SPR0_ATT   EQU     _OAMRAM+3
+_SPR0_Y     EQU     _RAM ; la Y del sprite 0, es el inicio de la mem de sprites
+_SPR0_X     EQU     _RAM+1
+_SPR0_NUM   EQU     _RAM+2
+_SPR0_ATT   EQU     _RAM+3
 
-_SPR1_Y     EQU     _OAMRAM+4
-_SPR1_X     EQU     _OAMRAM+5
-_SPR1_NUM   EQU     _OAMRAM+6
-_SPR1_ATT   EQU     _OAMRAM+7
-
-_STACKTOP    EQU     $FFFE
+_SPR1_Y     EQU     _RAM+4
+_SPR1_X     EQU     _RAM+5
+_SPR1_NUM   EQU     _RAM+6
+_SPR1_ATT   EQU     _RAM+7
 
 SECTION "SW_VAR_1", WRAM0
 
@@ -34,10 +32,15 @@ sw_player_sensor_up: DS 1       ; [YX] Tile del sensor up para colisiones
 sw_player_sensor_down: DS 1     ; [YX] Tile del sensor down para colisiones
 sw_player_sensor_right: DS 1    ; [YX] Tile del sensor right para colisiones
 sw_player_sensor_left: DS 1     ; [YX] Tile del sensor left para colisiones
+sw_player_sensor_land_r: DS 1   ; [YX] Tile del sensor right para pisar suelo
+sw_player_sensor_land_l: DS 1   ; [YX] Tile del sensor left para pisar suelo
 sw_player_lastpos_aereo: DS 1   ; [YX] Tile que tenia antes de cambiar a modo frontal
 sw_player_lasth_aereo: DS 1     ; [0H] Altura que tenia al cambiar a modo frontal
 sw_collision_map_a: DS 256      ; Mapa de colisiones y alturas [Modo Aereo]
 sw_collision_map_f: DS 256      ; Mapa de colisiones y alturas [Modo Frontal]
+sw_player_jump_value_n: DS 1    ; Enteros para el salto
+sw_player_jump_value_d: DS 1    ; Decimales para el salto
+sw_player_jump_state: DS 1      ; Estado del salto
 sw_cont: DS 1                   ; Contador para usos variados
 
 ;o-----------------------------------o
@@ -110,6 +113,12 @@ Game:
     ld      a, 56
     ld      [sw_player_pos_x], a    ; posición X del sprite
 
+    ; salto
+    ld      a, 0
+    ld      [sw_player_jump_value_n], a
+    ld      [sw_player_jump_value_d], a
+    ld      [sw_player_jump_state], a
+
     ; ahora vamos a crear los sprite.
 
     ld      a, 56
@@ -131,13 +140,13 @@ Game:
     ld      a, 0
     ld      [_SPR1_ATT], a  ; atributos especiales, de momento nada.
 
+    call    refresh_OAM
+
     ; reseteamos el modo de juego, por defecto es modo aereo
     ld      a, 0
     ld      [sw_playmode], a
     ld      a, 0
     ld      [sw_switch_params], a
-
-    ld      sp, _STACKTOP
 
     ; configuramos y activamos el display
     ld      a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ16|LCDCF_OBJON
@@ -159,10 +168,20 @@ game_loop:
     cp      145
     jr      nz, .wait 
 
+    call    refresh_OAM
+
     call    switch_playmode
-    call    wait_screen_blank
+
+    ld      a, [sw_switch_params]
+    and     %00000001
+    jr      nz, .game_loop_continue
+    
     call    player_move
     call    update_pos_tile
+    call    player_jump
+
+.game_loop_continue:
+    
     call    check_collisions
     call    update_display
     call    update_sprites
@@ -989,6 +1008,9 @@ fade_in_palette_gbc:
 ;o-----------------------------------o
 
 player_move:
+    ld      a, [sw_playmode]        ; Si es modo frontal, no se
+    and     %00000001               ; mueve ni arriba ni abajo
+    jr      nz, .player_move_right
 
 .player_move_up:
     ld      a, [sw_pad]
@@ -998,8 +1020,6 @@ player_move:
     ld      a, [sw_player_pos_y]    ; Muevo arriba Posicion real
     dec     a
     ld      [sw_player_pos_y], a
-
-    call    wait_screen_blank
 
     ld      a, 8
     ld      [_SPR0_NUM], a
@@ -1023,8 +1043,6 @@ player_move:
     inc     a
     ld      [sw_player_pos_y], a
 
-    call    wait_screen_blank
-
     ld      a, 0
     ld      [_SPR0_NUM], a
     ld      a, 2
@@ -1046,8 +1064,6 @@ player_move:
     ld      a, [sw_player_pos_x]    ; Muevo derecha Posicion real
     inc     a
     ld      [sw_player_pos_x], a
-
-    call    wait_screen_blank
 
     ld      a, 4
     ld      [_SPR0_NUM], a
@@ -1071,8 +1087,6 @@ player_move:
     dec     a
     ld      [sw_player_pos_x], a
 
-    call    wait_screen_blank
-
     ld      a, 6
     ld      [_SPR0_NUM], a
     ld      a, 4
@@ -1092,15 +1106,109 @@ player_move:
     ret
 
 update_sprites:
-    call    wait_screen_blank
-
     ld      a, [_SPR0_Y]
     ld      [_SPR1_Y], a    ; posición Y del sprite     
     ld      a, [_SPR0_X]
     add     a, 8
     ld      [_SPR1_X], a    ; posición X del sprite
 
+    ret
 
+;o-----------------------------------o
+;|            PLAYER JUMP            |
+;o-----------------------------------o
+
+player_jump:
+    ld      a, [sw_playmode]                ; Si no es modo frontal
+    and     %00000001                       ; no puede saltar
+    ret     z
+
+    ld      a, [sw_player_jump_state]
+    cp      0
+    jr      nz, .player_jump_continue       ; Si ya estaba saltando, sigo
+
+    ;ld      a, [sw_player_sensor_land_r]    ; Compruebo si alguno de los dos sensores
+    ;cp      0                               ; esta tocando el suelo
+    ;jr      nz, .player_jump_start
+
+    ;ld      a, [sw_player_sensor_land_l]
+    ;cp      0
+    ;jr      nz, .player_jump_start     
+
+    ;ret                                     ; Ninguno, no puedo saltar
+
+.player_jump_start:                         ; Empiezo a saltar
+    ld      a, [sw_pad]
+    and     PADF_A
+    ret     z
+
+    ld      a, 1
+    ld      [sw_player_jump_state], a
+    ld      a, %00000111
+    ld      [sw_player_jump_value_n], a 
+    ld      a, %00000101
+    ld      [sw_player_jump_value_d], a
+    ;ret                                     ; En el primer frame no salto
+
+.player_jump_continue:
+    ld      a, [sw_player_jump_value_n]
+    and     %00000100
+    jr      z, .player_jump_bajando
+
+.player_jump_subiendo:
+    ld      a, [sw_player_jump_value_n]
+    and     %00000011
+    ld      b, a
+    ld      a, [sw_player_pos_y]
+    sub     b
+    ld      [sw_player_pos_y], a
+
+    ld      a, [sw_player_jump_value_d]
+    dec     a
+    ld      [sw_player_jump_value_d], a
+    cp      0
+    ret     nz
+
+    ld      a, %00000101
+    ld      [sw_player_jump_value_d], a
+    ld      a, [sw_player_jump_value_n]
+    dec     a
+    ld      [sw_player_jump_value_n], a
+    and     %00000011
+    ret     nz
+    
+    ld      a, [sw_player_jump_value_n]
+    res     2, a
+    ld      [sw_player_jump_value_n], a
+    ret
+
+.player_jump_bajando:
+    ld      a, [sw_player_jump_value_n]
+    and     %00000011
+    ld      b, a
+    ld      a, [sw_player_pos_y]
+    add     a, b
+    ld      [sw_player_pos_y], a
+
+    ld      a, [sw_player_jump_value_d]
+    dec     a
+    ld      [sw_player_jump_value_d], a
+    cp      0
+    ret     nz
+
+    ld      a, %00000101
+    ld      [sw_player_jump_value_d], a
+    ld      a, [sw_player_jump_value_n]
+    cp      3
+    ret     z
+    inc     a
+    ld      [sw_player_jump_value_n], a
+
+    ret
+
+player_jump_reset:
+    ld      a, 0
+    ld      [sw_player_jump_state], a
     ret
 
 ;o---------------------------------------o
@@ -1224,6 +1332,20 @@ update_pos_tile:
     call    update_pos_tile_next
     ld      [sw_player_sensor_left], a
 
+    ld      a, [sw_player_pos_x]        ; Tile sensor land right
+    add     a, 3
+    ld      d, a
+    ld      a, [sw_player_pos_y]
+    call    update_pos_tile_next
+    ld      [sw_player_sensor_land_r], a
+
+    ld      a, [sw_player_pos_x]        ; Tile sensor land left
+    sub     a, 4
+    ld      d, a
+    ld      a, [sw_player_pos_y]
+    call    update_pos_tile_next
+    ld      [sw_player_sensor_land_l], a
+
     ret 
 
 update_pos_tile_next:                        
@@ -1243,17 +1365,22 @@ update_pos_tile_next:
 ;o-----------------------------------o
 
 check_collisions:
+    call    update_pos_tile
+
     ld      a, [sw_playmode]
     and     %00000001
     jr      nz, .check_collisions_frontal
-
-    ld      hl, sw_collision_map_a
-    jr      .check_collisions_continue
+    jr      .check_collisions_aereo
 
 .check_collisions_frontal:
     ld      hl, sw_collision_map_f
+    ld      b, h
+    ld      c, l
 
-.check_collisions_continue:
+    jr      .check_collisions_up
+
+.check_collisions_aereo:
+    ld      hl, sw_collision_map_a
     ld      b, h
     ld      c, l
 
@@ -1273,6 +1400,7 @@ check_collisions:
     ld      a, [sw_player_pos_y]        ; Empujamos hacia el lado contrario
     inc     a
     ld      [sw_player_pos_y], a        ; Repetimos con los demas sensores
+    jr      check_collisions
 
 .check_collisions_down:                 ; Colisiones sensor down
     ld      h, b
@@ -1290,6 +1418,7 @@ check_collisions:
     ld      a, [sw_player_pos_y]
     dec     a
     ld      [sw_player_pos_y], a
+    jr      check_collisions
 
 .check_collisions_right:                ; Colisiones sensor right
     ld      h, b
@@ -1307,6 +1436,7 @@ check_collisions:
     ld      a, [sw_player_pos_x]
     dec     a
     ld      [sw_player_pos_x], a
+    jr      check_collisions
 
 .check_collisions_left:                 ; Colisiones sensor left
     ld      h, b
@@ -1319,10 +1449,91 @@ check_collisions:
     ld      a, [hl]
     swap    a
     and     %00000001
-    ret     z
+    jr      z, .check_collisions_land
 
     ld      a, [sw_player_pos_x]
     inc     a
     ld      [sw_player_pos_x], a
+    jr      check_collisions
 
-    ret 
+.check_collisions_land:
+    ld      a, [sw_playmode]
+    and     %00000001
+    ret     z
+
+.check_collisions_land_r:
+    ld      h, b
+    ld      l, c
+    push    hl
+    ld      b, 1
+    ld      d, $00
+    ld      a, [sw_player_sensor_land_r]
+    ld      e, a
+    
+    add     hl, de
+    ld      a, [hl]
+    swap    a
+    and     %00000001
+    jr      z, .check_collisions_land_l
+
+    dec     b
+    ld      a, [sw_player_pos_y]
+    ;dec     a
+    ld      [sw_player_pos_y], a
+
+    ld      a, [sw_player_jump_value_n]
+    and     %00000100
+    call    z, player_jump_reset
+
+    ;jp      check_collisions
+
+.check_collisions_land_l:
+    pop     hl
+    ld      d, $00
+    ld      a, [sw_player_sensor_land_l]
+    ld      e, a
+    
+    add     hl, de
+    ld      a, [hl]
+    swap    a
+    and     %00000001
+    jr      z, .check_collisions_noland
+
+    ld      a, [sw_player_pos_y]
+    ;dec     a
+    ld      [sw_player_pos_y], a
+
+    ld      a, [sw_player_jump_value_n]
+    and     %00000100
+    call    z, player_jump_reset
+
+    ;jp      check_collisions
+    ret
+
+.check_collisions_noland:
+    ld      a, b
+    cp      0
+    ret     z
+
+    ld      a, [sw_player_jump_state]
+    cp      1
+    ret     z
+
+    ;ld      a, [sw_player_sensor_land_r]    ; Compruebo si alguno de los dos sensores
+    ;cp      1                               ; esta tocando el suelo
+    ;ret     z
+
+    ;ld      a, [sw_player_sensor_land_l]
+    ;cp      1
+    ;ret     z
+
+    ; Si ninguno esta tocando el suelo, sigo porque me estoy cayendo
+
+    ld      a, 1
+    ld      [sw_player_jump_state], a
+    ld      a, %00000000
+    ld      [sw_player_jump_value_n], a 
+    ld      a, %00000101
+    ld      [sw_player_jump_value_d], a
+
+    ret
