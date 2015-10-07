@@ -61,6 +61,36 @@ memset::
     
     ret
 
+;--------------------------------------------------------------------------
+;- memcopy()    bc = size    hl = source address    de = dest address     -
+;--------------------------------------------------------------------------
+
+memcopy:: ; hl and de should be incremented at the end of this
+    
+    ld  a,[hl+]
+    ld  [de],a
+    inc de
+    dec bc
+    ld  a,b
+    or  a,c
+    jr  nz,memcopy
+    
+    ret
+
+;--------------------------------------------------------------------------
+;- memcopy_fast()    b = size    hl = source address    de = dest address -
+;--------------------------------------------------------------------------
+
+memcopy_fast:: ; hl and de should be incremented at the end of this
+    
+    ld  a,[hl+]
+    ld  [de],a
+    inc de
+    dec b
+    jr  nz,memcopy_fast
+    
+    ret
+
 ; rutina de copia a memoria
 ; copia un numero de bytes de una direccion a otra
 ; espera los parámetros:

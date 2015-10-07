@@ -4,35 +4,58 @@
 INCLUDE "hardware.inc"
 INCLUDE "header.inc"
 
-SECTION	"Video_General",HOME
+SECTION	"Video_Graphics",ROMX
 
-; Title
-TitleTiles:
-INCLUDE "font.z80"
-EndTitleTiles:
+TitleBGTiles01:
+INCLUDE "tittle_bg_tiles_01.z80"
+EndTitleBGTiles01:
 
-TitleMap:
-INCLUDE "title.z80"
-EndTitleMap:
+TitleBGTiles02:
+INCLUDE "tittle_bg_tiles_02.z80"
+EndTitleBGTiles02:
+
+TitleBGTiles03:
+INCLUDE "tittle_bg_tiles_03.z80"
+EndTitleBGTiles03:
+
+TitleBGMap01:
+INCLUDE "tittle_bg_map_01.z80"
+EndTitleBGMap01:
+
+TitleBGMap02:
+INCLUDE "tittle_bg_map_02.z80"
+EndTitleBGMap02:
 
 ; Game
 GameTiles:
 INCLUDE "gametiles.z80"
 EndGameTiles:
 
-GameMap:
-INCLUDE "gamemap.z80"
-;INCLUDE "mapaprueba1.z80"
-;INCLUDE "mapaprueba2.z80"
-EndGameMap:
-
-GameMapCol:
-INCLUDE "mapaprueba2_col.z80"
-EndGameMapCol:
+GameMap1:
+INCLUDE "gamemap1.z80"
+;INCLUDE "gamemap_memoria.z80"
+EndGameMap1:
 
 GameMap2:
 INCLUDE "gamemap2.z80"
 EndGameMap2:
+
+GameMap3:
+INCLUDE "gamemap3.z80"
+EndGameMap3:
+
+GameMap1Col:
+INCLUDE "gamemap1_col.z80"
+;INCLUDE "gamemap_memoria_col.z80"
+EndGameMap1Col:
+
+GameMap2Col:
+INCLUDE "gamemap2_col.z80"
+EndGameMap2Col:
+
+GameMap3Col:
+INCLUDE "gamemap3_col.z80"
+EndGameMap3Col:
 
 ; Paletas GBC
 palette_dungeon:
@@ -40,6 +63,18 @@ DB $54,$5A,$2B,$35,$06,$20,$02,$10
 
 palette_player:
 DB $FF,$7F,$5B,$3E,$5C,$19,$02,$10
+
+SECTION	"Credits_Graphics",HOME
+
+CreditsTiles:
+INCLUDE "creditstiles.z80"
+EndCreditsTiles:
+
+CreditsMap:
+INCLUDE "creditsmap.z80"
+EndCreditsMap:
+
+SECTION	"Video_General",HOME
 
 apaga_LCD::
     ld      a,[rLCDC]

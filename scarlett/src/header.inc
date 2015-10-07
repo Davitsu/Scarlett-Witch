@@ -27,11 +27,19 @@ HEADER_INC	SET	1
 	GLOBAL Game
 
 ;o-----------------------------------o
+;|			 CREDITS.ASM             |
+;o-----------------------------------o
+
+	GLOBAL Credits
+
+;o-----------------------------------o
 ;|			 UTILITIES.ASM           |
 ;o-----------------------------------o
 
 	GLOBAL lee_pad
 	GLOBAL memset
+	GLOBAL memcopy
+	GLOBAL memcopy_fast
 	GLOBAL CopiaMemoria
 	GLOBAL CopiaMemoriaMapa
 	GLOBAL RellenaMemoria
@@ -39,27 +47,42 @@ HEADER_INC	SET	1
 ;o-----------------------------------o
 ;|			   VIDEO.ASM             |
 ;o-----------------------------------o
+	GLOBAL TitleBGTiles01
+	GLOBAL EndTitleBGTiles01
+	GLOBAL TitleBGTiles02
+	GLOBAL EndTitleBGTiles02
+	GLOBAL TitleBGTiles03
+	GLOBAL EndTitleBGTiles03
 
-	GLOBAL TitleTiles
-	GLOBAL EndTitleTiles
-
-	GLOBAL TitleMap
-	GLOBAL EndTitleMap
+	GLOBAL TitleBGMap01
+	GLOBAL EndTitleBGMap01
+	GLOBAL TitleBGMap02
+	GLOBAL EndTitleBGMap02
 
 	GLOBAL GameTiles
 	GLOBAL EndGameTiles
 
-	GLOBAL GameMap
-	GLOBAL EndGameMap
-
-	GLOBAL GameMapCol
-	GLOBAL EndGameMapCol
-
+	GLOBAL GameMap1
+	GLOBAL EndGameMap1
 	GLOBAL GameMap2
 	GLOBAL EndGameMap2
+	GLOBAL GameMap3
+	GLOBAL EndGameMap3
+
+	GLOBAL GameMap1Col
+	GLOBAL EndGameMap1Col
+	GLOBAL GameMap2Col
+	GLOBAL EndGameMap2Col
+	GLOBAL GameMap3Col
+	GLOBAL EndGameMap3Col
 
 	GLOBAL palette_dungeon
 	GLOBAL palette_player
+
+	GLOBAL CreditsTiles
+	GLOBAL EndCreditsTiles
+	GLOBAL CreditsMap
+	GLOBAL EndCreditsMap
 
 	GLOBAL apaga_LCD
 	GLOBAL enciende_LCD

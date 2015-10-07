@@ -1,0 +1,6 @@
+DB $DA,$FF,$FF,$FF,$E2,$E2,$EA,$EA,$A2,$A2,$EE,$EE,$EE,$EE,$FF,$3B
+DB $0F,$FF,$FF,$FF,$22,$22,$AE,$AE,$62,$62,$2F,$2F,$A2,$A2,$FF,$FF
+DB $BF,$FF,$FF,$FF,$22,$23,$EF,$EF,$23,$23,$BB,$BB,$23,$22,$FF,$FE
+DB $3F,$FF,$FF,$FF,$C4,$C4,$DE,$DE,$C6,$C6,$76,$F6,$C6,$46,$FF,$7F
+DB $DE,$FF,$FF,$FF,$44,$44,$D5,$D5,$C4,$C4,$D4,$D4,$D5,$D5,$FF,$FF
+DB $BF,$FF,$FF,$FF,$47,$47,$6F,$6F,$ED,$ED,$6F,$6F,$6D,$6A,$FF,$F8

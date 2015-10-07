@@ -4,15 +4,52 @@
 INCLUDE "hardware.inc"
 INCLUDE "header.inc"
 
-_SPR0_Y     EQU     _RAM ; la Y del sprite 0, es el inicio de la mem de sprites
-_SPR0_X     EQU     _RAM+1
-_SPR0_NUM   EQU     _RAM+2
-_SPR0_ATT   EQU     _RAM+3
+_SPR_HEART1_Y       EQU     _RAM        ; Corazon 1
+_SPR_HEART1_X       EQU     _RAM+1
+_SPR_HEART1_NUM     EQU     _RAM+2
+_SPR_HEART1_ATT     EQU     _RAM+3
 
-_SPR1_Y     EQU     _RAM+4
-_SPR1_X     EQU     _RAM+5
-_SPR1_NUM   EQU     _RAM+6
-_SPR1_ATT   EQU     _RAM+7
+_SPR_HEART2_Y       EQU     _RAM+4      ; Corazon 2
+_SPR_HEART2_X       EQU     _RAM+5
+_SPR_HEART2_NUM     EQU     _RAM+6
+_SPR_HEART2_ATT     EQU     _RAM+7
+
+_SPR_HEART3_Y       EQU     _RAM+8      ; Corazon 3
+_SPR_HEART3_X       EQU     _RAM+9
+_SPR_HEART3_NUM     EQU     _RAM+10
+_SPR_HEART3_ATT     EQU     _RAM+11
+
+_SPR_PLAYER_L_Y     EQU     _RAM+12     ; Player mitad izquierda
+_SPR_PLAYER_L_X     EQU     _RAM+13
+_SPR_PLAYER_L_NUM   EQU     _RAM+14
+_SPR_PLAYER_L_ATT   EQU     _RAM+15
+
+_SPR_PLAYER_R_Y     EQU     _RAM+16     ; Player mitad derecha
+_SPR_PLAYER_R_X     EQU     _RAM+17
+_SPR_PLAYER_R_NUM   EQU     _RAM+18
+_SPR_PLAYER_R_ATT   EQU     _RAM+19
+
+_SPR_FIREBALL_Y     EQU     _RAM+20     ; Disparo player 1
+_SPR_FIREBALL_X     EQU     _RAM+21
+_SPR_FIREBALL_NUM   EQU     _RAM+22
+_SPR_FIREBALL_ATT   EQU     _RAM+23
+
+_SPR_ENEMY1_L_Y     EQU     _RAM+24     ; Enemy 1 mitad izquierda
+_SPR_ENEMY1_L_X     EQU     _RAM+25
+_SPR_ENEMY1_L_NUM   EQU     _RAM+26
+_SPR_ENEMY1_L_ATT   EQU     _RAM+27
+
+_SPR_ENEMY1_R_Y     EQU     _RAM+28     ; Enemy 1 mitad derecha
+_SPR_ENEMY1_R_X     EQU     _RAM+29
+_SPR_ENEMY1_R_NUM   EQU     _RAM+30
+_SPR_ENEMY1_R_ATT   EQU     _RAM+31
+
+; DEFINITIONS
+_SW_POZO            EQU     $0F
+_SW_FACE_UP         EQU     8           ; Direccion a la que mira el player (a partir de su numero de tile)
+_SW_FACE_DOWN       EQU     0
+_SW_FACE_RIGHT      EQU     4
+_SW_FACE_LEFT       EQU     6
 
 SECTION "SW_VAR_1", WRAM0
 
@@ -25,6 +62,8 @@ sw_palette_gbc_background: DS 8 ; Paleta de fondo (para efectos)
 sw_palette_gbc_red: DS 1
 sw_palette_gbc_green: DS 1
 sw_palette_gbc_blue: DS 1
+sw_player_health: DS 1          ; Salud del player
+sw_player_inv: DS 1             ; Invencible, se activa al recibir dano
 sw_player_pos_y: DS 1           ; Player Y Position
 sw_player_pos_x: DS 1           ; Player X Position
 sw_player_pos_tile: DS 1        ; [YX] Tile en el que se encuentra player
@@ -36,12 +75,34 @@ sw_player_sensor_land_r: DS 1   ; [YX] Tile del sensor right para pisar suelo
 sw_player_sensor_land_l: DS 1   ; [YX] Tile del sensor left para pisar suelo
 sw_player_lastpos_aereo: DS 1   ; [YX] Tile que tenia antes de cambiar a modo frontal
 sw_player_lasth_aereo: DS 1     ; [0H] Altura que tenia al cambiar a modo frontal
+sw_player_altura: DS 1          ; [0H] Altura que tiene en el modo Aereo. No confundir con lastpos_aereo
+sw_player_altura_especial: DS 1 ; PRUEBA
+sw_player_pos_before_jump_y: DS 1 ; Posicion Y antes de saltar/caer
+sw_player_pos_before_jump_x: DS 1 ; Posicion Y antes de saltar/caer
+sw_player_fall: DS 1            ; Si se ha caido en un pozo o no
+sw_player_fall_cont: DS 1       ; Contador para reaparecer arriba
+sw_player_room: DS 1            ; Indice de la room del player
+sw_change_room_flag: DS 1       ; Estado del cambio de room
+sw_current_map: DS 2            ; Direccion de memoria del mapa actual
 sw_collision_map_a: DS 256      ; Mapa de colisiones y alturas [Modo Aereo]
 sw_collision_map_f: DS 256      ; Mapa de colisiones y alturas [Modo Frontal]
+sw_paint_tiles: DS 4            ; Indice de los tiles para pintar el mapa F
 sw_player_jump_value_n: DS 1    ; Enteros para el salto
 sw_player_jump_value_d: DS 1    ; Decimales para el salto
 sw_player_jump_state: DS 1      ; Estado del salto
+sw_fireball_pos_y: DS 1         ; Fireball Y Position
+sw_fireball_pos_x: DS 1         ; Fireball X Position
+sw_fireball_pos_tile: DS 1      ; [YX] Tile de fireball
+sw_fireball_state: DS 1         ; Fireball state
+sw_fireball_frame: DS 1         ; Fireball animation
+sw_old_scy: DS 1                ; Scroll Display anterior Y
 sw_cont: DS 1                   ; Contador para usos variados
+sw_enemy_pos_y: DS 1
+sw_enemy_pos_x: DS 1
+sw_enemy_pos_tile: DS 1
+sw_enemy_facing: DS 1           ; Posicion a la que mira el enemigo
+sw_enemy_health: DS 2           
+sw_enemy_type: DS 1             ; Tipo del enemigo [0 = Knight, 1 = Shooter]
 
 ;o-----------------------------------o
 ;|            GAME INIT              |
@@ -50,13 +111,18 @@ sw_cont: DS 1                   ; Contador para usos variados
 SECTION "Game", HOME ; Comienza el programa
 
 Game:
+    di      ; Deshabilito interrupciones, no hacen falta durante la partida
+
     ld      a, %11100100    ; Colores de paleta desde el mas oscuro al mas claro, 11 10 01 00
     ld      [rBGP], a       ; escribimos esto en el registro de paleta de fondo
     ld      [sw_palette_background], a
 
     ld      a, %11010010
-    ld      [rOBP0], a      ; y en la paleta 0 de sprites
+    ld      [rOBP0], a      ; paleta 0 de sprites
     ld      [sw_palette_oam], a
+
+    ld      a, %11100001
+    ld      [rOBP1], a      ; paleta 1 de sprites
 
     ; Paleta GBC Background
     ;ld      hl, palette_dungeon
@@ -77,21 +143,29 @@ Game:
     ld      bc, EndGameTiles-GameTiles  ; numero de bytes a copiar
 
     call    CopiaMemoria
- 
-    ld      hl, GameMap                 ; Tiles Mapa Aereo
+
+    ; seleccionamos el mapa actual para luego cambiar de modo
+    ld      a, 1
+    ld      [sw_player_room], a
+
+    ld      hl, GameMap1                ; Tiles Mapa Aereo
+    ld      a, h
+    ld      [sw_current_map], a
+    ld      a, l
+    ld      [sw_current_map+1], a               
     ld      de, _SCRN0
     ld      bc, 32*32
     call    CopiaMemoria
 
-    ld      hl, GameMapCol              ; Colisiones Mapa Aereo
+    ld      hl, GameMap1Col              ; Colisiones Mapa Aereo
     ld      de, sw_collision_map_a     
     ld      bc, 16*16
     call    CopiaMemoria
 
-    ;ld      hl, GameMap2                ; Tiles Mapa Frontal
-    ;ld      de, _SCRN1
-    ;ld      bc, 32*32
-    ;call    CopiaMemoriaMapa
+    ld      hl, _SCRN1
+    ld      d, $25
+    ld      bc, 32*32
+    call    memset
 
     ld      hl, sw_collision_map_f      ; Colisiones Mapa Frontal
     ld      a, 0
@@ -108,10 +182,18 @@ Game:
     call    RellenaMemoria  ; no usados quedan fuera de pantalla
 
     ; posiciones del player (no de los graficos)
-    ld      a, 56
+    ld      a, $EF
     ld      [sw_player_pos_y], a    ; posición Y del sprite     
-    ld      a, 56
+    ld      a, $28
     ld      [sw_player_pos_x], a    ; posición X del sprite
+
+    ; salud 
+    ld      a, 6
+    ld      [sw_player_health], a
+
+    ; invencible
+    ld      a, 0
+    ld      [sw_player_inv], a
 
     ; salto
     ld      a, 0
@@ -119,28 +201,124 @@ Game:
     ld      [sw_player_jump_value_d], a
     ld      [sw_player_jump_state], a
 
+    ; caida
+    ld      a, 0
+    ld      [sw_player_pos_before_jump_y], a
+    ld      [sw_player_pos_before_jump_x], a
+    ld      [sw_player_fall], a
+    ld      [sw_player_fall_cont], a
+
+    ; cambio de room
+
+    ld      a, 0
+    ld      [sw_change_room_flag], a
+
+    ; Fireball
+    ld      a, 0
+    ld      [sw_fireball_pos_y], a
+    ld      a, 0
+    ld      [sw_fireball_pos_x], a
+    ld      a, 0
+    ld      [sw_fireball_state], a
+
+    ; Enemy
+    ld      a, 0;140
+    ld      [sw_enemy_pos_y], a
+    ld      a, 0;40
+    ld      [sw_enemy_pos_x], a
+    ld      a, 0
+    ld      [sw_enemy_pos_tile], a
+    ld      a, 1
+    ld      [sw_enemy_facing], a
+    ld      a, 2
+    ld      [sw_enemy_health], a
+    ld      a, 1
+    ld      [sw_enemy_type], a
+
+    ld      de, sw_oam_table     ; memoria de atributos de sprites
+    ld      bc, 40*4        ; 40 sprites x 4 bytes cada uno
+    ld      l, 0                ; lo vamos a poner todo a cero, asi los sprites
+    call    RellenaMemoria  ; no usados quedan fuera de pantalla
+
     ; ahora vamos a crear los sprite.
 
-    ld      a, 56
-    ld      [_SPR0_Y], a    ; posición Y del sprite     
-    ld      a, 56
-    ld      [_SPR0_X], a    ; posición X del sprite
+    ld      a, 16
+    ld      [_SPR_HEART1_Y], a    ; posición Y del sprite     
+    ld      a, 16
+    ld      [_SPR_HEART1_X], a    ; posición X del sprite
+    ld      a, 41
+    ld      [_SPR_HEART1_NUM], a  ; número de tile en la tabla de tiles que usaremos
     ld      a, 0
-    ld      [_SPR0_NUM], a  ; número de tile en la tabla de tiles que usaremos
-    ld      a, 0
-    ld      [_SPR0_ATT], a  ; atributos especiales, de momento nada.
+    ld      [_SPR_HEART1_ATT], a  ; atributos especiales, de momento nada.
 
-    ld      a, [_SPR0_Y]
-    ld      [_SPR1_Y], a    ; posición Y del sprite     
-    ld      a, [_SPR0_X]
-    add     a, 8
-    ld      [_SPR1_X], a    ; posición X del sprite
-    ld      a, 2
-    ld      [_SPR1_NUM], a  ; número de tile en la tabla de tiles que usaremos
+    ld      a, 16
+    ld      [_SPR_HEART2_Y], a    ; posición Y del sprite     
+    ld      a, 24
+    ld      [_SPR_HEART2_X], a    ; posición X del sprite
+    ld      a, 41
+    ld      [_SPR_HEART2_NUM], a  ; número de tile en la tabla de tiles que usaremos
     ld      a, 0
-    ld      [_SPR1_ATT], a  ; atributos especiales, de momento nada.
+    ld      [_SPR_HEART2_ATT], a  ; atributos especiales, de momento nada.
+
+    ld      a, 16
+    ld      [_SPR_HEART3_Y], a    ; posición Y del sprite     
+    ld      a, 32
+    ld      [_SPR_HEART3_X], a    ; posición X del sprite
+    ld      a, 41
+    ld      [_SPR_HEART3_NUM], a  ; número de tile en la tabla de tiles que usaremos
+    ld      a, 0
+    ld      [_SPR_HEART3_ATT], a  ; atributos especiales, de momento nada.
+
+
+    ld      a, 56
+    ld      [_SPR_PLAYER_L_Y], a    ; posición Y del sprite     
+    ld      a, 56
+    ld      [_SPR_PLAYER_L_X], a    ; posición X del sprite
+    ld      a, 0
+    ld      [_SPR_PLAYER_L_NUM], a  ; número de tile en la tabla de tiles que usaremos
+    ld      a, 0
+    ld      [_SPR_PLAYER_L_ATT], a  ; atributos especiales, de momento nada.
+
+    ld      a, [_SPR_PLAYER_L_Y]
+    ld      [_SPR_PLAYER_R_Y], a    ; posición Y del sprite     
+    ld      a, [_SPR_PLAYER_L_X]
+    add     a, 8
+    ld      [_SPR_PLAYER_R_X], a    ; posición X del sprite
+    ld      a, 2
+    ld      [_SPR_PLAYER_R_NUM], a  ; número de tile en la tabla de tiles que usaremos
+    ld      a, 0
+    ld      [_SPR_PLAYER_R_ATT], a  ; atributos especiales, de momento nada.
+
+    ld      a, 0
+    ld      [_SPR_FIREBALL_Y], a 
+    ld      a, 0
+    ld      [_SPR_FIREBALL_X], a
+    ld      a, 92
+    ld      [_SPR_FIREBALL_NUM], a
+    ld      a, 0
+    ld      [_SPR_FIREBALL_ATT], a
+
+    ld      a, 0
+    ld      [_SPR_ENEMY1_L_Y], a 
+    ld      a, 0
+    ld      [_SPR_ENEMY1_L_X], a
+    ld      a, 136
+    ld      [_SPR_ENEMY1_L_NUM], a
+    ld      a, %00010000
+    ld      [_SPR_ENEMY1_L_ATT], a
+
+    ld      a, 0
+    ld      [_SPR_ENEMY1_R_Y], a 
+    ld      a, 0
+    ld      [_SPR_ENEMY1_R_X], a
+    ld      a, 138
+    ld      [_SPR_ENEMY1_R_NUM], a
+    ld      a, %00010000
+    ld      [_SPR_ENEMY1_R_ATT], a
 
     call    refresh_OAM
+    call    update_display      ; mas tarde lo haga, mas bugs genera
+    call    update_sprites
 
     ; reseteamos el modo de juego, por defecto es modo aereo
     ld      a, 0
@@ -149,8 +327,19 @@ Game:
     ld      [sw_switch_params], a
 
     ; configuramos y activamos el display
-    ld      a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ16|LCDCF_OBJON
+    ld      a, LCDCF_ON|LCDCF_BG8000|LCDCF_BG9800|LCDCF_BGON|LCDCF_OBJ16|LCDCF_OBJON;|LCDCF_WIN9C00
     ld      [rLCDC], a
+
+    ; VENTANA
+    ;ld      a, 8
+    ;ld      [rWX], a
+ 
+    ;ld      a, 128
+    ;ld      [rWY], a
+ 
+    ;ld      a, [rLCDC]
+    ;or      LCDCF_WINON
+    ;ld      [rLCDC], a
 
 ;o-----------------------------------o
 ;|             GAME LOOP             |
@@ -168,7 +357,11 @@ game_loop:
     cp      145
     jr      nz, .wait 
 
+    call    update_display
+    call    update_sprites
     call    refresh_OAM
+    ; refresh_OAM tiene que hacerse antes de que termine V-Blank
+    ; asi que no deberia ser mas abajo
 
     call    switch_playmode
 
@@ -178,17 +371,28 @@ game_loop:
     
     call    player_move
     call    update_pos_tile
+    call    update_altura
     call    player_jump
+    call    check_fall
+    call    player_shoot
+    ;call    update_enemy
+    call    check_door
 
 .game_loop_continue:
+    ld      a, [sw_change_room_flag]
+    cp      1
+    jr      z, .game_loop_end
     
     call    check_collisions
-    call    update_display
-    call    update_sprites
+
+.game_loop_end:
+    ld      a, 0
+    ld      [sw_change_room_flag], a
+
+    call    update_health
 
     call    gbt_update ; Update player
 
-    ;call retardo
     jr      game_loop
 
 ;o-----------------------------------o
@@ -202,8 +406,12 @@ switch_playmode:
     jr      nz, .switch_playmode_continue
 
     ld      a, [sw_pad]
-    and     PADF_B                      ; Si se ha pulsado Select, seguimos...
+    and     PADF_B                      ; Si se ha pulsado B, seguimos...
     ret     z
+
+    ld      a, [sw_player_jump_state]
+    cp      0
+    ret     nz
 
     ld      a, [sw_switch_params]
     or      %01110001                   ; Avisamos de que estamos cambiando:
@@ -268,9 +476,9 @@ switch_playmode:
     or      %00000100                   ; Ha acabado out, empezamos in:
     ld      [sw_switch_params], a       ; xxxx x1xx
 
-    ld      a, [rLCDC]                  ; Cambiamos al otro mapa
-    xor     %00001000
-    ld      [rLCDC], a
+    ;ld      a, [rLCDC]                  ; Cambiamos al otro mapa
+    ;xor     %00001000
+    ;ld      [rLCDC], a
 
     call    switch_to                   ; Preparamos mapa, colisiones, etc
 
@@ -339,14 +547,10 @@ switch_to:
     jp      z, .switch_to_aereo
 
 .switch_to_frontal:
-    ld      hl, sw_collision_map_a          ; Almacenamos la altura a la que estamos
-    ld      d, 0                            ; d  -> 00
-    ld      a, [sw_player_sensor_down]      ; e  -> YX (coordenadas tile)
-    ld      e, a                            ; de -> 00YX
-    add     hl, de                          ; Sumamos al primer byte del mapa
-    ld      a, [hl]                         ; de colisiones para acceder al byte
-    and     %00001111
-    ld      [sw_player_lasth_aereo], a      ; Guardamos la altura
+    call    reset_fireball                  ; Borramos la fireball si es que hay
+
+    call    update_altura                   ; Almacenamos la altura a la que estamos
+    ld      [sw_player_lasth_aereo], a
 
     ld      a, [sw_player_sensor_down]      ; Almaceno la posicion que tenia
     ld      [sw_player_lastpos_aereo], a    ; antes de cambiar de modo
@@ -399,8 +603,21 @@ switch_to:
     ld      [sw_cont], a
 
 .switch_to_frontal_pLh_loop:    ; Con este bucle relleno de aire ($00) las 
-    ld      [hl], $00           ; alturas del mapa F que no corresponden a
-    inc     hl                  ; ninguna profundidad del mapa A
+    ld      a, [sw_cont]        ; alturas del mapa F que no corresponden a
+    cp      16                  ; ninguna profundidad del mapa A
+    jr      z, .switch_to_frontal_pLh_loop_pared
+    ld      a, [sw_cont]
+    cp      1
+    jr      z, .switch_to_frontal_pLh_loop_pared
+    
+    ld      [hl], $00           
+    jr      .switch_to_frontal_pLh_loop_continue
+
+.switch_to_frontal_pLh_loop_pared:
+    ld      [hl], $10
+
+.switch_to_frontal_pLh_loop_continue:
+    inc     hl                  
 
     ld      a, [sw_cont]
     dec     a
@@ -424,15 +641,31 @@ switch_to:
     pop     hl
 
 .switch_to_frontal_pEh:         ; p Equal h
+
+.switch_to_frontal_pEh_loop:
+    ld      a, [sw_cont]
+    cp      16          
+    jr      z, .switch_to_frontal_pEh_pared
+    ld      a, [sw_cont]
+    cp      1
+    jr      z, .switch_to_frontal_pEh_pared
+
     call    switch_to_compare_tile_pEh
-    ld      [hl], a
+    ld      [hl], a          
+    jr      .switch_to_frontal_pEh_continue
+
+.switch_to_frontal_pEh_pared:
+    ld      [hl], $10           
+
+.switch_to_frontal_pEh_continue:
+
     inc     hl
     inc     de
 
     ld      a, [sw_cont]
     dec     a
     ld      [sw_cont], a
-    jr      nz, .switch_to_frontal_pEh
+    jr      nz, .switch_to_frontal_pEh_loop
 
     inc     b
     inc     c
@@ -441,34 +674,52 @@ switch_to:
     ld      [sw_cont], a
 
     ld      a, c
-    cp      16
-    jr      z, .switch_to_frontal_end
-
-    ld      a, b
-    cp      16
+    cp      15
     jr      z, .switch_to_frontal_pMh
 
-    jr      .switch_to_frontal_pEh
+    ld      a, b
+    cp      15
+    jr      z, .switch_to_frontal_pMh
+
+    jr      .switch_to_frontal_pEh_loop
 
 .switch_to_frontal_pMh:
     ; Si quisiera poner pozos tendria que ser aqui
+    ld      a, 16
+    ld      d, h
+    ld      e, l
+.switch_to_frontal_pMh_prepare:
+    dec     de
+    dec     a
+    jr      nz, .switch_to_frontal_pMh_prepare 
 
-    ld      [hl], $10
+    push    de 
+
+.switch_to_frontal_pMh_loop:
+
+    ld      a, [de]
+    ld      [hl], a
     inc     hl
+    inc     de
 
     ld      a, [sw_cont]
     dec     a
     ld      [sw_cont], a
-    jr      nz, .switch_to_frontal_pMh
+    jr      nz, .switch_to_frontal_pMh_loop
 
     inc     c 
 
     ld      a, 16
     ld      [sw_cont], a
 
+    pop     af
+    push    de
+
     ld      a, c
     cp      16
-    jr      nz, .switch_to_frontal_pMh
+    jr      nz, .switch_to_frontal_pMh_loop
+
+    pop     de
 
 .switch_to_frontal_end:
     call    fill_collisions_with_tiles
@@ -480,6 +731,18 @@ switch_to:
     ret
 
 .switch_to_aereo:
+    call    apaga_LCD
+
+    ld      a, [sw_current_map]
+    ld      h, a
+    ld      a, [sw_current_map+1]
+    ld      l, a
+    ld      de, _SCRN0
+    ld      bc, 32*32
+    call    CopiaMemoria
+
+    call    enciende_LCD
+
     ld      a, [sw_player_pos_tile]
     and     %11110000
     swap    a
@@ -577,7 +840,7 @@ switch_to_compare_tile_pEh:
 fill_collisions_with_tiles:
     call    apaga_LCD
 
-    ld      hl, _SCRN1
+    ld      hl, _SCRN0
     ld      de, sw_collision_map_f
     ld      a, 0
     ld      [sw_cont], a
@@ -587,28 +850,32 @@ fill_collisions_with_tiles:
     ld      a, [de]
     swap    a
     and     %00000001
-    jr      nz, .fill_collisions_with_tiles_black
+    jr      nz, .fill_collisions_with_tiles_solid
 
-.fill_collisions_with_tiles_white:
-    ld      a, 37
+.fill_collisions_with_tiles_air:
+    call    fill_collisions_air
     jr      .fill_collisiones_with_tiles_paint
 
-.fill_collisions_with_tiles_black:
-    ld      a, 38
+.fill_collisions_with_tiles_solid:
+    call    fill_collisions_solid
     jr      .fill_collisiones_with_tiles_paint
 
 .fill_collisiones_with_tiles_paint:
     push    hl
     push    de
 
+    ld      a, [sw_paint_tiles]
     ld      [hl], a
     inc     hl
+    ld      a, [sw_paint_tiles+1]
     ld      [hl], a
     ld      d, 0
     ld      e, 31
     add     hl, de
+    ld      a, [sw_paint_tiles+2]
     ld      [hl], a
     inc     hl
+    ld      a, [sw_paint_tiles+3]
     ld      [hl], a
 
     pop     de
@@ -638,6 +905,191 @@ fill_collisions_with_tiles:
     jr      c, .fill_collisions_with_tiles_loop
 
     call    enciende_LCD
+
+    ret
+
+fill_collisions_air:
+    ld      a, [sw_cont]
+    cp      5
+    jr      c, .fill_collisions_air_white0
+    cp      8
+    jr      c, .fill_collisions_air_white1
+    cp      9
+    jr      c, .fill_collisions_air_white2
+    cp      10
+    jr      c, .fill_collisions_air_white3
+
+.fill_collisions_air_white4:
+    ld      a, 38
+    ld      [sw_paint_tiles], a
+    ld      a, 38
+    ld      [sw_paint_tiles+1], a
+    ld      a, 38
+    ld      [sw_paint_tiles+2], a
+    ld      a, 38
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_air_white3:
+    ld      a, 86
+    ld      [sw_paint_tiles], a
+    ld      a, 86
+    ld      [sw_paint_tiles+1], a
+    ld      a, 87
+    ld      [sw_paint_tiles+2], a
+    ld      a, 87
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_air_white2:
+    ld      a, 84
+    ld      [sw_paint_tiles], a
+    ld      a, 84
+    ld      [sw_paint_tiles+1], a
+    ld      a, 85
+    ld      [sw_paint_tiles+2], a
+    ld      a, 85
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_air_white1:
+    ld      a, 67
+    ld      [sw_paint_tiles], a
+    ld      a, 67
+    ld      [sw_paint_tiles+1], a
+    ld      a, 68
+    ld      [sw_paint_tiles+2], a
+    ld      a, 68
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_air_white0:
+    ld      a, 37
+    ld      [sw_paint_tiles], a
+    ld      a, 37
+    ld      [sw_paint_tiles+1], a
+    ld      a, 37
+    ld      [sw_paint_tiles+2], a
+    ld      a, 37
+    ld      [sw_paint_tiles+3], a
+    ret
+
+; TILES SOLIDOS
+fill_collisions_solid:
+    ld      a, c
+    cp      0   ; Limite izquierdo
+    jr      z, .fill_collisions_solid_lim_left
+    cp      15  ; Limite derecho
+    jr      z, .fill_collisions_solid_lim_right
+
+    push    de
+    dec     de
+    ld      a, [de]
+    pop     de
+    swap    a
+    and     %00000001 ; Pared borde izquierdo
+    jr      z, .fill_collisions_solid_wall_left
+
+    push    de
+    inc     de
+    ld      a, [de]
+    pop     de
+    swap    a
+    and     %00000001 ; Pared borde izquierdo
+    jr      z, .fill_collisions_solid_wall_right
+
+.fill_collisions_solid_default:
+    ld      a, 39
+    ld      [sw_paint_tiles], a
+    ld      a, 39
+    ld      [sw_paint_tiles+1], a
+    ld      a, 17
+    ld      [sw_paint_tiles+2], a
+    ld      a, 17
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_solid_lim_left:
+    ld      a, 52
+    ld      [sw_paint_tiles], a
+    ld      a, 50
+    ld      [sw_paint_tiles+1], a
+    ld      a, 53
+    ld      [sw_paint_tiles+2], a
+    ld      a, 51
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_solid_lim_right:
+    ld      a, 54
+    ld      [sw_paint_tiles], a
+    ld      a, 56
+    ld      [sw_paint_tiles+1], a
+    ld      a, 55
+    ld      [sw_paint_tiles+2], a
+    ld      a, 57
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_solid_wall_left:
+    push    de
+    inc     de
+    ld      a, [de]
+    pop     de
+    swap    a
+    and     %00000001 ; Pared borde izquierdo
+    jr      z, .fill_collisions_solid_wall_leftandright
+
+    ld      a, 61
+    ld      [sw_paint_tiles], a
+    ld      a, 39
+    ld      [sw_paint_tiles+1], a
+    ld      a, 60
+    ld      [sw_paint_tiles+2], a
+    ld      a, 17
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_solid_wall_right:
+    ld      a, 39
+    ld      [sw_paint_tiles], a
+    ld      a, 65
+    ld      [sw_paint_tiles+1], a
+    ld      a, 17
+    ld      [sw_paint_tiles+2], a
+    ld      a, 64
+    ld      [sw_paint_tiles+3], a
+    ret
+
+.fill_collisions_solid_wall_leftandright:
+    ld      a, 61
+    ld      [sw_paint_tiles], a
+    ld      a, 65
+    ld      [sw_paint_tiles+1], a
+    ld      a, 60
+    ld      [sw_paint_tiles+2], a
+    ld      a, 64
+    ld      [sw_paint_tiles+3], a
+    ret
+
+update_altura:
+    ld      hl, sw_collision_map_a          ; Almacenamos la altura a la que estamos
+    ld      d, 0                            ; d  -> 00
+    ld      a, [sw_player_pos_tile]         ; e  -> YX (coordenadas tile)
+    ld      e, a                            ; de -> 00YX
+    add     hl, de                          ; Sumamos al primer byte del mapa
+    ld      a, [hl]                         ; de colisiones para acceder al byte
+    and     %00001111
+    ld      [sw_player_altura_especial], a      ; Guardamos la altura
+
+    ld      hl, sw_collision_map_a          ; Almacenamos la altura a la que estamos
+    ld      d, 0                            ; d  -> 00
+    ld      a, [sw_player_sensor_down]      ; e  -> YX (coordenadas tile)
+    ld      e, a                            ; de -> 00YX
+    add     hl, de                          ; Sumamos al primer byte del mapa
+    ld      a, [hl]                         ; de colisiones para acceder al byte
+    and     %00001111
+    ld      [sw_player_altura], a      ; Guardamos la altura
 
     ret
 
@@ -1008,6 +1460,11 @@ fade_in_palette_gbc:
 ;o-----------------------------------o
 
 player_move:
+    ; Si se ha caido al pozo que no se mueva
+    ld      a, [sw_player_fall]
+    cp      0
+    ret     nz
+
     ld      a, [sw_playmode]        ; Si es modo frontal, no se
     and     %00000001               ; mueve ni arriba ni abajo
     jr      nz, .player_move_right
@@ -1022,17 +1479,17 @@ player_move:
     ld      [sw_player_pos_y], a
 
     ld      a, 8
-    ld      [_SPR0_NUM], a
+    ld      [_SPR_PLAYER_L_NUM], a
     ld      a, 10
-    ld      [_SPR1_NUM], a
+    ld      [_SPR_PLAYER_R_NUM], a
 
-    ld      a, [_SPR0_ATT]
+    ld      a, [_SPR_PLAYER_L_ATT]
     and     %11011111
-    ld      [_SPR0_ATT], a
+    ld      [_SPR_PLAYER_L_ATT], a
 
-    ld      a, [_SPR1_ATT]
+    ld      a, [_SPR_PLAYER_R_ATT]
     and     %11011111
-    ld      [_SPR1_ATT], a
+    ld      [_SPR_PLAYER_R_ATT], a
 
 .player_move_down:
     ld      a, [sw_pad]
@@ -1044,17 +1501,17 @@ player_move:
     ld      [sw_player_pos_y], a
 
     ld      a, 0
-    ld      [_SPR0_NUM], a
+    ld      [_SPR_PLAYER_L_NUM], a
     ld      a, 2
-    ld      [_SPR1_NUM], a
+    ld      [_SPR_PLAYER_R_NUM], a
 
-    ld      a, [_SPR0_ATT]
+    ld      a, [_SPR_PLAYER_L_ATT]
     and     %11011111
-    ld      [_SPR0_ATT], a
+    ld      [_SPR_PLAYER_L_ATT], a
 
-    ld      a, [_SPR1_ATT]
+    ld      a, [_SPR_PLAYER_R_ATT]
     and     %11011111
-    ld      [_SPR1_ATT], a
+    ld      [_SPR_PLAYER_R_ATT], a
 
 .player_move_right:
     ld      a, [sw_pad]
@@ -1066,17 +1523,17 @@ player_move:
     ld      [sw_player_pos_x], a
 
     ld      a, 4
-    ld      [_SPR0_NUM], a
+    ld      [_SPR_PLAYER_L_NUM], a
     ld      a, 6
-    ld      [_SPR1_NUM], a
+    ld      [_SPR_PLAYER_R_NUM], a
 
-    ld      a, [_SPR0_ATT]
+    ld      a, [_SPR_PLAYER_L_ATT]
     and     %11011111
-    ld      [_SPR0_ATT], a
+    ld      [_SPR_PLAYER_L_ATT], a
 
-    ld      a, [_SPR1_ATT]
+    ld      a, [_SPR_PLAYER_R_ATT]
     and     %11011111
-    ld      [_SPR1_ATT], a
+    ld      [_SPR_PLAYER_R_ATT], a
 
 .player_move_left:
     ld      a, [sw_pad]
@@ -1088,29 +1545,65 @@ player_move:
     ld      [sw_player_pos_x], a
 
     ld      a, 6
-    ld      [_SPR0_NUM], a
+    ld      [_SPR_PLAYER_L_NUM], a
     ld      a, 4
-    ld      [_SPR1_NUM], a
+    ld      [_SPR_PLAYER_R_NUM], a
 
-    ld      a, [_SPR0_ATT]
+    ld      a, [_SPR_PLAYER_L_ATT]
     or      %00100000
-    ld      [_SPR0_ATT], a
+    ld      [_SPR_PLAYER_L_ATT], a
 
-    ld      a, [_SPR1_ATT]
+    ld      a, [_SPR_PLAYER_R_ATT]
     or      %00100000
-    ld      [_SPR1_ATT], a
+    ld      [_SPR_PLAYER_R_ATT], a
 
 
-.player_move_end:      
+.player_move_end: 
 
     ret
 
 update_sprites:
-    ld      a, [_SPR0_Y]
-    ld      [_SPR1_Y], a    ; posición Y del sprite     
-    ld      a, [_SPR0_X]
+    ; Player
+    ld      a, [_SPR_PLAYER_L_Y]
+    ld      [_SPR_PLAYER_R_Y], a    ; posición Y del sprite     
+    ld      a, [_SPR_PLAYER_L_X]
     add     a, 8
-    ld      [_SPR1_X], a    ; posición X del sprite
+    ld      [_SPR_PLAYER_R_X], a    ; posición X del sprite
+
+    ; Fireball
+    ld      a, [sw_fireball_state]
+    bit     4, a
+    jr      z, .update_sprites_fireball_end
+
+    ld      a, [rSCY]
+    ld      b, a
+    ld      a, [sw_fireball_pos_y]
+    sub     a, b
+    ld      [_SPR_FIREBALL_Y], a
+
+    ld      a, [rSCX]
+    ld      b, a
+    ld      a, [sw_fireball_pos_x]
+    sub     a, b
+    ld      [_SPR_FIREBALL_X], a
+.update_sprites_fireball_end:
+
+    ld      a, [rSCY]
+    ld      b, a
+    ld      a, [sw_enemy_pos_y]
+    sub     a, b
+    ;ld      [_SPR_ENEMY1_L_Y], a
+    ;ld      [_SPR_ENEMY1_R_Y], a
+
+    ld      a, [rSCX]
+    ld      b, a
+    ld      a, [sw_enemy_pos_x]
+    sub     a, b
+    ;ld      [_SPR_ENEMY1_L_X], a
+    add     a, 8
+    ;ld      [_SPR_ENEMY1_R_X], a
+
+.update_sprites_end:
 
     ret
 
@@ -1121,7 +1614,11 @@ update_sprites:
 player_jump:
     ld      a, [sw_playmode]                ; Si no es modo frontal
     and     %00000001                       ; no puede saltar
-    ret     z
+    jr      nz, .player_jump_modo_f
+
+    ret
+
+.player_jump_modo_f:
 
     ld      a, [sw_player_jump_state]
     cp      0
@@ -1211,11 +1708,275 @@ player_jump_reset:
     ld      [sw_player_jump_state], a
     ret
 
+;o-----------------------------------o
+;|           PLAYER SHOOT            |
+;o-----------------------------------o
+
+player_shoot:
+    ld      a, [sw_playmode]                ; Si no es modo aereo
+    and     %00000001                       ; no puede disparar
+    ret     nz
+
+    ld      a, [sw_fireball_state]
+    bit     4, a 
+    jp      nz, .player_shoot_update 
+
+.player_shoot_start:
+    ld      a, [sw_pad]
+    and     PADF_A
+    ret     z
+
+    ld      a, 0
+    ld      [sw_fireball_frame], a
+
+.player_shoot_up:
+    ld      a, _SW_FACE_UP
+    ld      b, a
+    ld      a, [_SPR_PLAYER_L_NUM]
+    cp      b
+    jr      nz, .player_shoot_down
+
+    ld      a, [sw_player_pos_y]
+    sub     a, 16
+    ld      [sw_fireball_pos_y], a
+
+    ld      a, [sw_player_pos_x]
+    add     a, 4
+    ld      [sw_fireball_pos_x], a
+
+    ld      a, 92
+    ld      [_SPR_FIREBALL_NUM], a
+
+    ld      a, [_SPR_FIREBALL_ATT]
+    res     5, a
+    set     6, a
+    ld      [_SPR_FIREBALL_ATT], a
+
+    ld      a, %00010000
+    ld      [sw_fireball_state], a
+    call    check_fireball
+
+.player_shoot_down:
+    ld      a, _SW_FACE_DOWN
+    ld      b, a
+    ld      a, [_SPR_PLAYER_L_NUM]
+    cp      b
+    jr      nz, .player_shoot_right
+
+    ld      a, [sw_player_pos_y]
+    add     a, 8
+    ld      [sw_fireball_pos_y], a
+
+    ld      a, [sw_player_pos_x]
+    add     a, 4
+    ld      [sw_fireball_pos_x], a
+
+    ld      a, 92
+    ld      [_SPR_FIREBALL_NUM], a
+
+    ld      a, [_SPR_FIREBALL_ATT]
+    res     5, a
+    res     6, a
+    ld      [_SPR_FIREBALL_ATT], a
+
+    ld      a, %00010001
+    ld      [sw_fireball_state], a
+    call    check_fireball
+
+.player_shoot_right:
+    ld      a, _SW_FACE_RIGHT
+    ld      b, a
+    ld      a, [_SPR_PLAYER_L_NUM]
+    cp      b
+    jr      nz, .player_shoot_left
+
+    ld      a, [sw_player_pos_y]
+    ;add     a, 8
+    ld      [sw_fireball_pos_y], a
+
+    ld      a, [sw_player_pos_x]
+    add     a, 15
+    ld      [sw_fireball_pos_x], a
+
+    ld      a, 96
+    ld      [_SPR_FIREBALL_NUM], a
+
+    ld      a, [_SPR_FIREBALL_ATT]
+    res     5, a
+    res     6, a
+    ld      [_SPR_FIREBALL_ATT], a
+
+    ld      a, %00010010
+    ld      [sw_fireball_state], a
+    call    check_fireball
+
+.player_shoot_left:
+    ld      a, _SW_FACE_LEFT
+    ld      b, a
+    ld      a, [_SPR_PLAYER_L_NUM]
+    cp      b
+    ret     nz
+
+    ld      a, [sw_player_pos_y]
+    ;add     a, 8
+    ld      [sw_fireball_pos_y], a
+
+    ld      a, [sw_player_pos_x]
+    sub     a, 7
+    ld      [sw_fireball_pos_x], a
+
+    ld      a, 96
+    ld      [_SPR_FIREBALL_NUM], a
+
+    ld      a, [_SPR_FIREBALL_ATT]
+    set     5, a
+    res     6, a
+    ld      [_SPR_FIREBALL_ATT], a
+
+    ld      a, %00010011
+    ld      [sw_fireball_state], a
+    call    check_fireball
+
+.player_shoot_update:
+    ld      a, [sw_fireball_state]
+    and     %00000011
+    cp      %00000000
+    jr      z, .player_shoot_update_up
+    cp      %00000001
+    jr      z, .player_shoot_update_down
+    cp      %00000010
+    jr      z, .player_shoot_update_right
+    jr      .player_shoot_update_left
+
+.player_shoot_update_up:
+    ld      a, [sw_fireball_pos_y]
+    sub     a, 2
+    ld      [sw_fireball_pos_y], a
+    jr      .player_shoot_update_end
+
+.player_shoot_update_down:
+    ld      a, [sw_fireball_pos_y]
+    add     a, 2
+    ld      [sw_fireball_pos_y], a
+    jr      .player_shoot_update_end
+
+.player_shoot_update_right:
+    ld      a, [sw_fireball_pos_x]
+    add     a, 2
+    ld      [sw_fireball_pos_x], a
+    jr      .player_shoot_update_end
+
+.player_shoot_update_left:
+    ld      a, [sw_fireball_pos_x]
+    sub     a, 2
+    ld      [sw_fireball_pos_x], a
+
+.player_shoot_update_end:
+    call    ani_fireball
+    call    check_fireball
+
+    ret
+
+check_fireball:
+    ld      a, [sw_fireball_pos_x]        
+    ld      d, a                        
+    ld      a, [sw_fireball_pos_y]
+    call    update_pos_tile_next
+    ld      [sw_fireball_pos_tile], a
+
+    ld      a, [sw_fireball_pos_x]
+    cp      9
+    jr      c, .check_fireball_reset
+    cp      248
+    jr      nc, .check_fireball_reset
+
+    ld      a, [sw_fireball_pos_y]
+    cp      9
+    jr      c, .check_fireball_reset
+    cp      248
+    jr      nc, .check_fireball_reset
+
+    ld      hl, sw_collision_map_a
+    ld      d, $00                       ; d  -> 00
+    ld      a, [sw_fireball_pos_tile]    ; e  -> YX (coordenadas tile)
+    ld      e, a                         ; de -> 00XY
+    
+    add     hl, de
+
+    ld      a, [hl]
+    and     %00001111
+    ld      hl, sw_player_altura
+    cp      [hl]
+    ret     nc
+
+.check_fireball_reset:
+    call    reset_fireball
+
+    ret
+
+reset_fireball:
+    ld      a, 0
+    ld      [sw_fireball_pos_y], a
+    ld      [sw_fireball_pos_x], a
+    ld      [sw_fireball_pos_tile], a
+    ld      [sw_fireball_state], a
+    ld      [_SPR_FIREBALL_Y], a
+    ld      [_SPR_FIREBALL_X], a 
+
+    ret
+
+ani_fireball:
+    ld      a, [sw_fireball_frame]
+    inc     a
+    ld      [sw_fireball_frame], a
+
+    cp      4
+    ret     c
+
+    ld      a, 0
+    ld      [sw_fireball_frame], a
+
+.ani_fireball_v1:
+    ld      a, [_SPR_FIREBALL_NUM]
+    cp      92
+    jr      nz, .ani_fireball_v2
+    ld      a, 94
+    ld      [_SPR_FIREBALL_NUM], a
+    ret
+
+.ani_fireball_v2:
+    cp      94
+    jr      nz, .ani_fireball_h1
+    ld      a, 92
+    ld      [_SPR_FIREBALL_NUM], a
+    ret
+
+.ani_fireball_h1:
+    cp      96
+    jr      nz, .ani_fireball_h2
+    ld      a, 98
+    ld      [_SPR_FIREBALL_NUM], a
+    ret
+
+.ani_fireball_h2:
+    cp      98
+    ret     nz
+    ld      a, 96
+    ld      [_SPR_FIREBALL_NUM], a
+    ret
+
 ;o---------------------------------------o
 ;| DISPLAY UPDATE + PLAYER SPRITE UPDATE |
 ;o---------------------------------------o
 
 update_display:
+    ld      a, [sw_player_fall]
+    cp      0
+    jr      nz, .update_display_y_move_bottom
+
+    call    wait_screen_blank
+    ld      a, [rSCY]
+    ld      [sw_old_scy], a
 
 .update_display_y:
     ld      a, [sw_player_pos_y]            ; PlayerPosY < 72, Display no se mueve
@@ -1226,31 +1987,37 @@ update_display:
     cp      184 ;$B8
     jr      nc, .update_display_y_move_bottom
 
+    call    wait_screen_blank
     ld      a, [sw_player_pos_y]            ; Else, Display si se mueve
     sub     a, 72 ;$48
     ld      [rSCY], a
 
+    call    wait_screen_blank
     ld      a, 72                           ; Dejar Grafico estatico en la
-    ld      [_SPR0_Y], a                    ; mitad Y del display
+    ld      [_SPR_PLAYER_L_Y], a                    ; mitad Y del display
 
     jr      .update_display_x
 
-.update_display_y_move_top:                 
+.update_display_y_move_top:   
+    call    wait_screen_blank              
     ld      a, 0
     ld      [rSCY], a
 
+    call    wait_screen_blank
     ld      a, [sw_player_pos_y]            ; Mover Grafico cuando esta
-    ld      [_SPR0_Y], a                    ; en el limite superior del mapa
+    ld      [_SPR_PLAYER_L_Y], a                    ; en el limite superior del mapa
 
     jr      .update_display_x
 
 .update_display_y_move_bottom: 
+    call    wait_screen_blank
     ld      a, 112 ;$70
     ld      [rSCY], a
 
+    call    wait_screen_blank
     ld      a, [sw_player_pos_y]            ; Mover Grafico cuando esta
     sub     a, 112 ;$70                     ; en el limite inferior del mapa
-    ld      [_SPR0_Y], a
+    ld      [_SPR_PLAYER_L_Y], a
 
 .update_display_x:
     ld      a, [sw_player_pos_x]            ; PlayerPosX < 80, Display no se mueve
@@ -1261,31 +2028,37 @@ update_display:
     cp      176 ;$B0
     jr      nc, .update_display_x_move_right
 
+    call    wait_screen_blank
     ld      a, [sw_player_pos_x]            ; Else, Display si se mueve
     sub     a, 80 ;$50
     ld      [rSCX], a
 
+    call    wait_screen_blank
     ld      a, 80                           ; Dejar Grafico estatico en la
-    ld      [_SPR0_X], a                    ; mitad X del display
+    ld      [_SPR_PLAYER_L_X], a                    ; mitad X del display
 
     jr      .update_display_end
 
-.update_display_x_move_left:   
+.update_display_x_move_left:
+    call    wait_screen_blank   
     ld      a, 0
     ld      [rSCX], a
 
+    call    wait_screen_blank
     ld      a, [sw_player_pos_x]            ; Mover Grafico cuando esta
-    ld      [_SPR0_X], a                    ; en el limite izquierdo del mapa
+    ld      [_SPR_PLAYER_L_X], a                    ; en el limite izquierdo del mapa
 
     jr      .update_display_end
 
 .update_display_x_move_right: 
+    call    wait_screen_blank
     ld      a, 96 ;$60
     ld      [rSCX], a
 
+    call    wait_screen_blank
     ld      a, [sw_player_pos_x]            ; Mover Grafico cuando esta
     sub     a, 96 ;$60                      ; en el limite derecho del mapa
-    ld      [_SPR0_X], a
+    ld      [_SPR_PLAYER_L_X], a
 
 .update_display_end:
 
@@ -1366,6 +2139,7 @@ update_pos_tile_next:
 
 check_collisions:
     call    update_pos_tile
+    call    update_altura
 
     ld      a, [sw_playmode]
     and     %00000001
@@ -1391,12 +2165,33 @@ check_collisions:
     ld      a, [sw_player_sensor_up]     ; e  -> YX (coordenadas tile)
     ld      e, a                         ; de -> 00XY
     
-    add     hl, de                       ; Sumamos al primer byte del mapa
-    ld      a, [hl]                     ; de colisiones para acceder al byte
-    swap    a
-    and     %00000001                   ; del tile en cuestion
-    jr      z, .check_collisions_down   ; Si es un 1, debe colisionar
+    add     hl, de
 
+    ld      a, [sw_playmode]
+    and     %00000001
+    jr      nz, .check_collisions_up_f
+
+.check_collisions_up_a:
+    ld      a, [hl]
+    swap    a
+    and     %00000001
+    jr      nz, .check_collisions_up_set
+
+    ld      a, [hl]
+    and     %00001111
+    ld      hl, sw_player_altura
+    cp      [hl]
+    jr      z, .check_collisions_down
+
+    jr      .check_collisions_up_set  
+
+.check_collisions_up_f:
+    ld      a, [hl]
+    swap    a
+    and     %00000001
+    jr      z, .check_collisions_down
+
+.check_collisions_up_set:
     ld      a, [sw_player_pos_y]        ; Empujamos hacia el lado contrario
     inc     a
     ld      [sw_player_pos_y], a        ; Repetimos con los demas sensores
@@ -1410,11 +2205,32 @@ check_collisions:
     ld      e, a
     
     add     hl, de
+
+    ld      a, [sw_playmode]
+    and     %00000001
+    jr      nz, .check_collisions_down_f
+
+.check_collisions_down_a:
+    ld      a, [hl]
+    swap    a
+    and     %00000001
+    jr      nz, .check_collisions_down_set
+
+    ld      a, [hl]
+    and     %00001111
+    ld      hl, sw_player_altura_especial
+    cp      [hl]
+    jr      z, .check_collisions_right
+
+    jr      .check_collisions_down_set  
+
+.check_collisions_down_f:
     ld      a, [hl]
     swap    a
     and     %00000001
     jr      z, .check_collisions_right
 
+.check_collisions_down_set:
     ld      a, [sw_player_pos_y]
     dec     a
     ld      [sw_player_pos_y], a
@@ -1428,15 +2244,36 @@ check_collisions:
     ld      e, a
     
     add     hl, de
+
+    ld      a, [sw_playmode]
+    and     %00000001
+    jr      nz, .check_collisions_right_f
+
+.check_collisions_right_a:
+    ld      a, [hl]
+    swap    a
+    and     %00000001
+    jr      nz, .check_collisions_right_set
+
+    ld      a, [hl]
+    and     %00001111
+    ld      hl, sw_player_altura
+    cp      [hl]
+    jr      z, .check_collisions_left
+
+    jr      .check_collisions_right_set  
+
+.check_collisions_right_f:
     ld      a, [hl]
     swap    a
     and     %00000001
     jr      z, .check_collisions_left
 
+.check_collisions_right_set:
     ld      a, [sw_player_pos_x]
     dec     a
     ld      [sw_player_pos_x], a
-    jr      check_collisions
+    jp      check_collisions
 
 .check_collisions_left:                 ; Colisiones sensor left
     ld      h, b
@@ -1446,15 +2283,36 @@ check_collisions:
     ld      e, a
     
     add     hl, de
+
+    ld      a, [sw_playmode]
+    and     %00000001
+    jr      nz, .check_collisions_left_f
+
+.check_collisions_left_a:
+    ld      a, [hl]
+    swap    a
+    and     %00000001
+    jr      nz, .check_collisions_left_set
+
+    ld      a, [hl]
+    and     %00001111
+    ld      hl, sw_player_altura
+    cp      [hl]
+    jr      z, .check_collisions_land
+
+    jr      .check_collisions_left_set  
+
+.check_collisions_left_f:
     ld      a, [hl]
     swap    a
     and     %00000001
     jr      z, .check_collisions_land
 
+.check_collisions_left_set:
     ld      a, [sw_player_pos_x]
     inc     a
     ld      [sw_player_pos_x], a
-    jr      check_collisions
+    jp      check_collisions
 
 .check_collisions_land:
     ld      a, [sw_playmode]
@@ -1507,6 +2365,15 @@ check_collisions:
     and     %00000100
     call    z, player_jump_reset
 
+    ; Si llega aqui es que los dos sensores detectan suelo
+    ld      a, b
+    cp      1
+    ret     z
+    ld      a, [sw_player_pos_y]
+    ld      [sw_player_pos_before_jump_y], a
+    ld      a, [sw_player_pos_x]
+    ld      [sw_player_pos_before_jump_x], a
+
     ;jp      check_collisions
     ret
 
@@ -1535,5 +2402,350 @@ check_collisions:
     ld      [sw_player_jump_value_n], a 
     ld      a, %00000101
     ld      [sw_player_jump_value_d], a
+
+    ret
+
+
+check_door:
+    ld      a, [sw_playmode]    ; Cambia de Room solo en modo aereo
+    and     %00000001
+    ret     nz
+
+    call    update_pos_tile
+    call    update_altura
+
+    ld      hl, sw_collision_map_a
+    ld      d, $00                     
+    ld      a, [sw_player_sensor_down]    
+    ld      e, a
+    add     hl, de
+
+    ld      a, [hl]
+    and     %01100000
+    ret     z
+
+    swap    a
+    rrc     a
+    ld      b, a
+
+    call    choose_room
+    call    prepare_room
+
+    ld      a, 1
+    ld      [sw_change_room_flag], a
+
+    ret
+
+choose_room:
+    cp      1
+    jr      nz, .choose_room_retrocede
+
+.choose_room_avanza: ; Si es 1, avanza
+    ld      a, [sw_player_room]
+    inc     a
+    ld      [sw_player_room], a
+    ret
+
+.choose_room_retrocede: ; Si es 2, retrocede
+    ld      a, [sw_player_room]
+    dec     a
+    ld      [sw_player_room], a
+    ret
+
+prepare_room:
+    cp      1
+    jr      z, .prepare_room_1
+    cp      2
+    jr      z, .prepare_room_2
+    cp      3
+    jr      z, .prepare_room_3
+
+    ; Si llega a aqui es que va a los creditos
+    jp      Credits
+
+.prepare_room_1:
+    ld      hl, GameMap1Col
+    push    hl
+    ld      hl, GameMap1
+
+    ld      a, $70
+    ld      [sw_player_pos_y], a
+    ld      a, $EC
+    ld      [sw_player_pos_x], a
+
+    jr      .prepare_room_continue
+
+.prepare_room_2:
+    ld      hl, GameMap2Col
+    push    hl
+    ld      hl, GameMap2
+
+    ld      a, b
+    cp      1
+    jr      z, .prepare_room_2_avanza
+
+    ld      a, $DD
+    ld      [sw_player_pos_y], a
+    ld      a, $EC
+    ld      [sw_player_pos_x], a
+
+    jr      .prepare_room_continue
+
+.prepare_room_2_avanza:
+    ld      a, $7F
+    ld      [sw_player_pos_y], a
+    ld      a, $18
+    ld      [sw_player_pos_x], a
+
+    jr      .prepare_room_continue
+
+.prepare_room_3:
+    ld      hl, GameMap3Col
+    push    hl
+    ld      hl, GameMap3
+
+    ld      a, $DE
+    ld      [sw_player_pos_y], a
+    ld      a, $14
+    ld      [sw_player_pos_x], a
+
+    jr      .prepare_room_continue
+
+.prepare_room_continue:
+
+    call    apaga_LCD
+
+    ld      a, h
+    ld      [sw_current_map], a
+    ld      a, l
+    ld      [sw_current_map+1], a               
+    ld      de, _SCRN0
+    ld      bc, 32*32
+    call    CopiaMemoria
+
+    pop     hl
+    ld      de, sw_collision_map_a     
+    ld      bc, 16*16
+    call    CopiaMemoria
+
+    call    enciende_LCD
+
+    ret
+
+update_health:
+    ld      a, [sw_player_health]
+    cp      5
+    jr      z, .update_health_3h
+    jr      nc, .update_health_3f
+
+    ld      a, 45
+    jr      .update_health_continue2
+.update_health_3f:
+    ld      a, 41
+    jr      .update_health_continue2
+.update_health_3h:
+    ld      a, 43
+
+.update_health_continue2:
+    ld      [_SPR_HEART3_NUM], a
+
+    ld      a, [sw_player_health]
+    cp      3
+    jr      z, .update_health_2h
+    jr      nc, .update_health_2f
+
+    ld      a, 45
+    jr      .update_health_continue1
+.update_health_2f:
+    ld      a, 41
+    jr      .update_health_continue1
+.update_health_2h:
+    ld      a, 43
+
+.update_health_continue1:
+    ld      [_SPR_HEART2_NUM], a
+
+    ld      a, [sw_player_health]
+    cp      1
+    jr      z, .update_health_1h
+    jr      nc, .update_health_1f
+
+    ld      a, 45
+    jr      .update_health_end
+.update_health_1f:
+    ld      a, 41
+    jr      .update_health_end
+.update_health_1h:
+    ld      a, 43
+
+.update_health_end:
+    ld      [_SPR_HEART1_NUM], a
+
+    ret
+
+update_enemy:
+    ld      a, [sw_enemy_type]
+    cp      0
+    jr      z, .knight
+    jr      .shooter
+
+.knight:
+
+    jr      .update_enemy_params
+
+.shooter:
+    ; Calculo dist X entre Player y Enemy
+    ld      a, [sw_enemy_pos_x]
+    ld      b, a
+    ld      a, [sw_player_pos_x]
+    call    sub_abs
+    ld      d, a
+
+    ; Calculo dist Y entre Player y Enemy
+    ld      a, [sw_enemy_pos_y]
+    ld      b, a
+    ld      a, [sw_player_pos_y]
+    call    sub_abs
+
+    cp      d
+    jr      c, .shooter_horizontal
+
+.shooter_vertical:
+    ld      a, [sw_enemy_pos_y]
+    ld      b, a
+    ld      a, [sw_player_pos_y]
+    cp      b
+    jr      nc, .shooter_vertical_s
+
+.shooter_vertical_n:
+    ld      a, 0
+    jr      .shooter_face_end
+
+.shooter_vertical_s:
+    ld      a, 1
+    jr      .shooter_face_end
+
+.shooter_horizontal:
+    ld      a, [sw_enemy_pos_x]
+    ld      b, a
+    ld      a, [sw_player_pos_x]
+    cp      b
+    jr      c, .shooter_horizontal_e
+
+.shooter_horizontal_w:
+    ld      a, 2
+    jr      .shooter_face_end
+
+.shooter_horizontal_e:
+    ld      a, 3
+    jr      .shooter_face_end
+
+.shooter_face_end:
+    ld      [sw_enemy_facing], a
+    jr      .update_enemy_params
+
+.update_enemy_params:
+    ld      a, [_SPR_ENEMY1_L_ATT]          ; Quitamos el espejado si lo tiene
+    res     5, a
+    ld      [_SPR_ENEMY1_L_ATT], a
+    ld      [_SPR_ENEMY1_R_ATT], a
+    ld      a, [sw_enemy_facing]
+    cp      0
+    jr      z, .update_enemy_face_up
+    cp      1
+    jr      z, .update_enemy_face_down
+    cp      2
+    jr      z, .update_enemy_face_right
+
+    ld      a, [_SPR_ENEMY1_L_ATT]          ; Hacemos espejado porque mira izquierda
+    set     5, a
+    ld      [_SPR_ENEMY1_L_ATT], a
+    ld      [_SPR_ENEMY1_R_ATT], a
+    jr      .update_enemy_face_left
+
+.update_enemy_face_up:
+    ld      a, 144
+    ld      b, 146
+    jr      .update_enemy_face_end
+.update_enemy_face_down:
+    ld      a, 136
+    ld      b, 138
+    jr      .update_enemy_face_end
+.update_enemy_face_right:
+    ld      a, 140
+    ld      b, 142
+    jr      .update_enemy_face_end
+.update_enemy_face_left:  
+    ld      a, 142
+    ld      b, 140
+.update_enemy_face_end:
+    ld      [_SPR_ENEMY1_L_NUM], a
+    ld      a, b
+    ld      [_SPR_ENEMY1_R_NUM], a
+
+    ret
+
+; Valor absoluto de una resta:
+; a -> n1, b -> n2   |  a -> res, c-> aux
+sub_abs:
+    cp      b
+    jr      nc, .next
+    ld      c, b
+    ld      b, a
+    ld      a, c
+.next: 
+    sub     b
+    ret
+
+check_fall:
+    ld      a, [sw_playmode]                ; Si no es modo frontal
+    and     %00000001                       ; no tiene que comprobar
+    ret     z
+
+    ld      a, [sw_player_fall]
+    cp      0
+    jr      nz, .check_fall_recover
+
+    ld      a, [sw_player_pos_tile]
+    and     %11110000
+    cp      $F0
+    ret     nz
+
+    ld      a, 1
+    ld      [sw_player_fall], a
+
+    ret
+
+.check_fall_recover:
+    ld      a, [sw_player_fall_cont]
+    inc     a
+    ld      [sw_player_fall_cont], a
+    cp      64
+    jr      nc, .check_fall_recover_finish
+
+    ; Para que se quede ahi abajo el grafico un rato
+    ld      a, [sw_player_pos_y]
+    cp      20
+    ret     nc
+    cp      16
+    ret     c
+
+    ld      a, 16
+    ld      [sw_player_pos_y], a
+    ret
+
+.check_fall_recover_finish:
+    ld      a, 0
+    ld      [sw_player_fall], a
+    ld      [sw_player_fall_cont], a
+
+    ld      a, [sw_player_health]
+    dec     a
+    ld      [sw_player_health], a
+    
+    ld      a, [sw_player_pos_before_jump_y]
+    ld      [sw_player_pos_y], a
+    ld      a, [sw_player_pos_before_jump_x]
+    ld      [sw_player_pos_x], a
 
     ret
